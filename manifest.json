@@ -1,0 +1,15 @@
+{
+    "name": "Nowcast",
+    "short_name": "Nowcast",
+    "start_url": "./",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#EEEEFF",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        }
+    ]
+}
