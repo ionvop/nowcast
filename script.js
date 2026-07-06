@@ -7,16 +7,20 @@ const imgWeather = document.getElementById("imgWeather");
 const panelTemp = document.getElementById("panelTemp");
 const panelCity = document.getElementById("panelCity");
 const panelForecast = document.getElementById("panelForecast");
+const pageHeat = document.getElementById("pageHeat");
+const canvasGraph = document.getElementById("canvasGraph");
 const tabHome = document.getElementById("tabHome");
 const tabHeat = document.getElementById("tabHeat");
 const tabMap = document.getElementById("tabMap");
 const tabCommunity = document.getElementById("tabCommunity");
 const tabProfile = document.getElementById("tabProfile");
+let chartGraph;
+let controller;
 let currentPage = "home";
 
 (() => {
     openPage("home");
-})()
+})();
 
 btnReload.onclick = () => {
     openPage(currentPage);
@@ -43,7 +47,11 @@ tabProfile.onclick = () => {
 }
 
 async function openPage(page) {
-    for (const page of [pageLoader, pageHome]) {
+    controller?.abort();          // Cancel previous fetches
+    controller = new AbortController();
+    const signal = controller.signal;
+
+    for (const page of [pageLoader, pageHome, pageHeat]) {
         page.style.display = "none";
     }
     
@@ -65,7 +73,7 @@ async function openPage(page) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
 
-            await (async () => {
+            {
                 const response = await fetch("api/?action=weather", {
                     method: "post",
                     headers: {
@@ -74,16 +82,18 @@ async function openPage(page) {
                     body: JSON.stringify({
                         latitude,
                         longitude
-                    })
+                    }),
+                    signal
                 });
 
                 const data = await response.json();
+                console.log(data);
                 panelWeather.textContent = data.json.weatherCondition.description.text;
                 imgWeather.src = data.json.weatherCondition.iconBaseUri + ".svg";
-                panelTemp.innerHTML = `${data.json.temperature.degrees}&deg;C`;
-            })();
+                panelTemp.textContent = `${data.json.temperature.degrees}°C`;
+            }
 
-            await (async () => {
+            {
                 const response = await fetch("api/?action=geocode", {
                     method: "post",
                     headers: {
@@ -92,14 +102,16 @@ async function openPage(page) {
                     body: JSON.stringify({
                         latitude,
                         longitude
-                    })
+                    }),
+                    signal
                 });
 
                 const data = await response.json();
+                console.log(data);
                 panelCity.textContent = data.json.results[0].formattedAddress;
-            })();
+            }
 
-            await (async () => {
+            {
                 const reposne = await fetch("api/?action=forecast", {
                     method: "post",
                     headers: {
@@ -108,7 +120,8 @@ async function openPage(page) {
                     body: JSON.stringify({
                         latitude,
                         longitude
-                    })
+                    }),
+                    signal
                 });
 
                 const data = await reposne.json();
@@ -149,10 +162,114 @@ async function openPage(page) {
                         </div>
                     `;
                 }
-            })();
+            }
 
             pageLoader.style.display = "none";
             pageHome.style.display = "block";
+        } break;
+        case "heat": {
+            pageLoader.style.display = "flex";
+            tabHeat.style.color = "var(--theme)";
+            panelTitle.textContent = "Heat Data";
+            currentPage = "heat";
+
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            {
+                const reposne = await fetch("api/?action=forecast", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        latitude,
+                        longitude
+                    }),
+                    signal
+                });
+
+                const data = await reposne.json();
+                console.log(data);
+
+                const hours = data.json.forecastHours.map(hour =>
+                    `${hour.displayDateTime.hours}:00`
+                );
+
+                const series = [
+                    ["temperature", "Temperature", "#e53935"],
+                    ["feelsLikeTemperature", "Feels Like", "#fb8c00"],
+                    ["dewPoint", "Dew Point", "#1e88e5"],
+                    ["heatIndex", "Heat Index", "#8e24aa"],
+                    ["windChill", "Wind Chill", "#00897b"],
+                    ["wetBulbTemperature", "Wet Bulb", "#3949ab"]
+                ];
+
+                const datasets = series.map(([key, label, color]) => ({
+                    label,
+                    data: data.json.forecastHours.map(h => h[key]?.degrees ?? null),
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false
+                }));
+
+                if (chartGraph) chartGraph.destroy();
+
+                chartGraph = new Chart(canvasGraph, {
+                    type: "line",
+                    data: {
+                        labels: hours,
+                        datasets
+                    },
+                    options: {
+                        responsive: true,
+                        interaction: {
+                            mode: "index",
+                            intersect: false
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: "Hourly Temperature Forecast"
+                            },
+                            legend: {
+                                position: "bottom"
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} °C`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: "Hour"
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: "Temperature (°C)"
+                                }
+                            }
+                        }
+                    }
+                });
+
+                pageLoader.style.display = "none";
+                pageHeat.style.display = "block";
+            }
         } break;
     }
 }
