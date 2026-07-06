@@ -1,3 +1,3 @@
 <?php
 
-$GOOGLE_API_KEY = "AIzaSyCk_uDnbJOFOVDiLVS-kmtQKHkvIdlOIKI";
+$GOOGLE_API_KEY = "";
