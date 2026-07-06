@@ -1,0 +1,9 @@
+<html>
+    <body>
+        <script>
+            location.replace(
+                (matchMedia("(display-mode: standalone)").matches || navigator.standalone === true) ? "app.html" : "install.html"
+            );
+        </script>
+    </body>
+</html>
