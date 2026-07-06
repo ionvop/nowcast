@@ -53,16 +53,17 @@ async function openPage(page) {
 
     switch (page) {
         case "home": {
-            let latitude = 7.6096, longitude = 125.9754;
             pageLoader.style.display = "flex";
             tabHome.style.color = "var(--theme)";
             panelTitle.textContent = "Home";
             currentPage = "home";
 
-            navigator.geolocation.getCurrentPosition((position) => {
-                latitude = position.coords.latitude;
-                longitude = position.coords.longitude;
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
             });
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
 
             await (async () => {
                 const response = await fetch("api/?action=weather", {
