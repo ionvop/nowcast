@@ -2,6 +2,7 @@
     <head>
         <link rel="stylesheet" href="style.css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
     </head>
     <body>
         <div style="
@@ -110,6 +111,22 @@
 
                     </div>
                 </div>
+                <div style="
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pageHeat">
+                    <div style="
+                        padding: 1rem;">
+                        <canvas style="
+                            width: 100%;"
+                            width="300"
+                            height="400"
+                            id="canvasGraph">
+
+                        </canvas>
+                    </div>
+                </div>
             </div>
             <div style="
                 display: grid;
@@ -197,6 +214,7 @@
                 </div>
             </div>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="script.js"></script>
     </body>
 </html>
