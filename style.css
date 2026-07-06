@@ -1,0 +1,10 @@
+:root {
+    --theme: #0af;
+}
+
+body {
+    margin: 0rem;
+    padding: 0rem;
+    font-size: 1rem;
+    font-family: sans-serif;
+}
