@@ -1,6 +1,7 @@
 const panelTitle = document.getElementById("panelTitle");
 const btnReload = document.getElementById("btnReload");
 const pageLoader = document.getElementById("pageLoader");
+const panelLoader = document.getElementById("panelLoader");
 const pageHome = document.getElementById("pageHome");
 const panelWeather = document.getElementById("panelWeather");
 const imgWeather = document.getElementById("imgWeather");
@@ -9,6 +10,8 @@ const panelCity = document.getElementById("panelCity");
 const panelForecast = document.getElementById("panelForecast");
 const pageHeat = document.getElementById("pageHeat");
 const canvasGraph = document.getElementById("canvasGraph");
+const pageMap = document.getElementById("pageMap");
+const panelMap = document.getElementById("panelMap");
 const tabHome = document.getElementById("tabHome");
 const tabHeat = document.getElementById("tabHeat");
 const tabMap = document.getElementById("tabMap");
@@ -18,8 +21,12 @@ let chartGraph;
 let controller;
 let currentPage = "home";
 
-(() => {
+(async () => {
     openPage("home");
+
+    const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
 })();
 
 btnReload.onclick = () => {
@@ -47,11 +54,12 @@ tabProfile.onclick = () => {
 }
 
 async function openPage(page) {
-    controller?.abort();          // Cancel previous fetches
+    controller?.abort();
     controller = new AbortController();
     const signal = controller.signal;
+    panelLoader.textContent = "Loading...";
 
-    for (const page of [pageLoader, pageHome, pageHeat]) {
+    for (const page of [pageLoader, pageHome, pageHeat, pageMap]) {
         page.style.display = "none";
     }
     
@@ -74,6 +82,8 @@ async function openPage(page) {
             const longitude = position.coords.longitude;
 
             {
+                panelLoader.textContent = "Loading weather... (1/3)";
+
                 const response = await fetch("api/?action=weather", {
                     method: "post",
                     headers: {
@@ -88,12 +98,14 @@ async function openPage(page) {
 
                 const data = await response.json();
                 console.log(data);
-                panelWeather.textContent = data.json.weatherCondition.description.text;
-                imgWeather.src = data.json.weatherCondition.iconBaseUri + ".svg";
-                panelTemp.textContent = `${data.json.temperature.degrees}°C`;
+                panelWeather.textContent = data.weatherCondition.description.text;
+                imgWeather.src = data.weatherCondition.iconBaseUri + ".svg";
+                panelTemp.textContent = `${data.temperature.degrees}°C`;
             }
 
             {
+                panelLoader.textContent = "Loading city... (2/3)";
+
                 const response = await fetch("api/?action=geocode", {
                     method: "post",
                     headers: {
@@ -108,11 +120,13 @@ async function openPage(page) {
 
                 const data = await response.json();
                 console.log(data);
-                panelCity.textContent = data.json.results[0].formattedAddress;
+                panelCity.textContent = data.results[0].formattedAddress;
             }
 
             {
-                const reposne = await fetch("api/?action=forecast", {
+                panelLoader.textContent = "Loading forecast... (3/3)";
+
+                const response = await fetch("api/?action=forecast", {
                     method: "post",
                     headers: {
                         "Content-Type": "application/json"
@@ -124,11 +138,11 @@ async function openPage(page) {
                     signal
                 });
 
-                const data = await reposne.json();
+                const data = await response.json();
                 console.log(data);
                 panelForecast.innerHTML = "";
 
-                for (const forecast of data.json.forecastHours) {
+                for (const forecast of data.forecastHours) {
                     panelForecast.innerHTML += /*html*/`
                         <div style="
                             padding: 1rem;
@@ -181,7 +195,9 @@ async function openPage(page) {
             const longitude = position.coords.longitude;
 
             {
-                const reposne = await fetch("api/?action=forecast", {
+                panelLoader.textContent = "Loading data...";
+
+                const response = await fetch("api/?action=forecast", {
                     method: "post",
                     headers: {
                         "Content-Type": "application/json"
@@ -193,10 +209,10 @@ async function openPage(page) {
                     signal
                 });
 
-                const data = await reposne.json();
+                const data = await response.json();
                 console.log(data);
 
-                const hours = data.json.forecastHours.map(hour =>
+                const hours = data.forecastHours.map(hour =>
                     `${hour.displayDateTime.hours}:00`
                 );
 
@@ -211,7 +227,7 @@ async function openPage(page) {
 
                 const datasets = series.map(([key, label, color]) => ({
                     label,
-                    data: data.json.forecastHours.map(h => h[key]?.degrees ?? null),
+                    data: data.forecastHours.map(h => h[key]?.degrees ?? null),
                     borderColor: color,
                     backgroundColor: color,
                     borderWidth: 2,
@@ -271,6 +287,170 @@ async function openPage(page) {
                 pageHeat.style.display = "block";
             }
         } break;
+        case "map": {
+            const {AdvancedMarkerElement} = await google.maps.importLibrary("marker");
+            pageLoader.style.display = "flex";
+            tabMap.style.color = "var(--theme)";
+            panelTitle.textContent = "Map";
+            currentPage = "map";
+
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
+
+            const location = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+
+            const map = new google.maps.Map(pageMap, {
+                zoom: 13,
+                center: location,
+                mapId: "DEMO_MAP_ID"
+            });
+
+            {
+                panelLoader.textContent = "Loading map...";
+
+                const response = await fetch("api/?action=get_heat_locations", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({}),
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                for (const heatLocation of data) {
+                    const circleMarker = document.createElement("div");
+                    circleMarker.style.backgroundColor = getHeatIndexColor(heatLocation.heat_index);
+                    circleMarker.style.border = "3px solid #FFFFFF";
+                    circleMarker.style.borderRadius = "50%";
+                    circleMarker.style.width = "20px";
+                    circleMarker.style.height = "20px";
+                    circleMarker.style.boxShadow = "0px 2px 4px rgba(0,0,0,0.3)";
+
+                    const location = {
+                        lat: heatLocation.latitude,
+                        lng: heatLocation.longitude
+                    }
+
+                    const marker = new google.maps.marker.AdvancedMarkerElement({
+                        map: map,
+                        position: location,
+                        content: circleMarker,
+                        title: `Heat Index: ${heatLocation.heat_index} °C`
+                    });
+
+                    const dateString = new Date(heatLocation.time * 1000).toLocaleString();
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: /*html*/`
+                            <div style="
+                                font-size: 1rem;
+                                line-height: 1.5rem;">
+                                ${marker.title}<br>
+                                ${dateString}
+                            </div>
+                        `
+                    });
+
+                    marker.addListener("click", (event) => {
+                        event.stop();
+
+                        infoWindow.open({
+                            anchor: marker,
+                            map: map,
+                        });
+                    });
+                }
+            }
+
+            map.addListener("click", async (event) => {
+                const location = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+
+                console.log(location);
+                map.panTo(location);
+
+                const loader = document.createElement("div");
+                loader.style.width = "20px";
+                loader.style.height = "20px";
+                loader.innerHTML = /*html*/`<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3" stroke-linecap="round"><animate attributeName="stroke-dasharray" dur="1.5s" calcMode="spline" values="0 150;42 150;42 150;42 150" keyTimes="0;0.475;0.95;1" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" repeatCount="indefinite"/><animate attributeName="stroke-dashoffset" dur="1.5s" calcMode="spline" values="0;-16;-59;-59" keyTimes="0;0.475;0.95;1" keySplines="0.42,0,0.58,1;0.42,0,0.58,1;0.42,0,0.58,1" repeatCount="indefinite"/></circle><animateTransform attributeName="transform" type="rotate" dur="2s" values="0 12 12;360 12 12" repeatCount="indefinite"/></g></svg>`;
+                
+                const loaderMarker = new google.maps.marker.AdvancedMarkerElement({
+                    map: map,
+                    position: location,
+                    content: loader,
+                    title: "Loading..."
+                });
+                
+                const response = await fetch("api/?action=analyze_heat_location", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        latitude: location.lat,
+                        longitude: location.lng
+                    }),
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+                loaderMarker.map = null;
+                const circleMarker = document.createElement("div");
+                circleMarker.style.backgroundColor = getHeatIndexColor(data.heatIndex);
+                circleMarker.style.border = "3px solid #FFFFFF";
+                circleMarker.style.borderRadius = "50%";
+                circleMarker.style.width = "20px";
+                circleMarker.style.height = "20px";
+                circleMarker.style.boxShadow = "0px 2px 4px rgba(0,0,0,0.3)";
+
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    map: map,
+                    position: location,
+                    content: circleMarker,
+                    title: `Heat Index: ${data.heatIndex} °C`
+                });
+
+                const dateString = new Date(data.time * 1000).toLocaleString();
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: /*html*/`
+                        <div style="
+                            font-size: 1rem;
+                            line-height: 1.5rem;">
+                            ${marker.title}<br>
+                            ${dateString}
+                        </div>
+                    `
+                });
+
+                marker.addListener("click", (event) => {
+                    event.stop();
+
+                    infoWindow.open({
+                        anchor: marker,
+                        map: map,
+                    });
+                });
+
+                infoWindow.open({
+                    anchor: marker,
+                    map: map,
+                });
+            });
+
+            pageLoader.style.display = "none";
+            pageMap.style.display = "block";
+        } break;
     }
 }
 
@@ -278,4 +458,44 @@ function convertHour(hour24) {
     const ampm = hour24 >= 12 ? 'PM' : 'AM';
     const hour12 = (hour24 % 12) || 12;
     return `${hour12}${ampm}`;
+}
+
+/**
+ * Returns a color representing the heat index.
+ * @param {number} heatIndex - Heat index in Celsius.
+ * @returns {string} CSS rgb() color.
+ */
+function getHeatIndexColor(heatIndex) {
+    const stops = [
+        { value: 27, color: [255, 235, 59] },   // Yellow
+        { value: 32, color: [255, 193, 7] },    // Amber
+        { value: 41, color: [255, 87, 34] },    // Deep Orange
+        { value: 54, color: [183, 28, 28] }     // Dark Red
+    ];
+
+    // Clamp below minimum
+    if (heatIndex <= stops[0].value) {
+        return `rgb(${stops[0].color.join(",")})`;
+    }
+
+    // Clamp above maximum
+    if (heatIndex >= stops[stops.length - 1].value) {
+        return `rgb(${stops[stops.length - 1].color.join(",")})`;
+    }
+
+    // Find the interval
+    for (let i = 0; i < stops.length - 1; i++) {
+        const a = stops[i];
+        const b = stops[i + 1];
+
+        if (heatIndex >= a.value && heatIndex <= b.value) {
+            const t = (heatIndex - a.value) / (b.value - a.value);
+
+            const r = Math.round(a.color[0] + (b.color[0] - a.color[0]) * t);
+            const g = Math.round(a.color[1] + (b.color[1] - a.color[1]) * t);
+            const bColor = Math.round(a.color[2] + (b.color[2] - a.color[2]) * t);
+
+            return `rgb(${r}, ${g}, ${bColor})`;
+        }
+    }
 }
