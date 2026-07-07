@@ -296,7 +296,7 @@ require_once "api/config.php";
                 </div>
             </div>
         </div>
-        <script async src="https://maps.googleapis.com/maps/api/js?key=<?= $GOOGLE_API_KEY ?>&loading=async&callback=initMap"></script>
+        <script async src="https://maps.googleapis.com/maps/api/js?key=<?= $GOOGLE_MAPS_KEY ?>&loading=async&callback=initMap"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="script.js?v=<?= time() ?>"></script>
     </body>
