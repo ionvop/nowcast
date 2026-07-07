@@ -20,13 +20,15 @@ switch ($_GET["action"]) {
     case "analyze_heat_location":
         $db = new SQLite3("database.db");
         $response = fetch("https://weather.googleapis.com/v1/currentConditions:lookup?key={$GOOGLE_API_KEY}&location.latitude={$data["latitude"]}&location.longitude={$data["longitude"]}");
-        $heatIndex = $response["json"]["heatIndex"]["degrees"];
+        
+        $heatIndex = $response["json"]["heatIndex"]["degrees"] ?? null;
 
         $query = <<<SQL
             DELETE FROM `heat_locations`
             WHERE (`latitude` > :latitude - 0.001 AND `latitude` < :latitude + 0.001
             AND `longitude` > :longitude - 0.001 AND `longitude` < :longitude + 0.001)
-            OR `time` < :time - 3600;
+            OR `time` < :time - 3600
+            OR `heat_index` IS NULL;
         SQL;
 
         $stmt = $db->prepare($query);
@@ -59,7 +61,8 @@ switch ($_GET["action"]) {
 
         $query = <<<SQL
             DELETE FROM `heat_locations`
-            WHERE `time` < :time - 3600;
+            WHERE `time` < :time - 3600
+            OR `heat_index` IS NULL;
         SQL;
 
         $stmt = $db->prepare($query);
