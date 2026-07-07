@@ -12,6 +12,10 @@ const pageHeat = document.getElementById("pageHeat");
 const canvasGraph = document.getElementById("canvasGraph");
 const pageMap = document.getElementById("pageMap");
 const panelMap = document.getElementById("panelMap");
+const panelAlert = document.getElementById("panelAlert");
+const panelAlertTitle = document.getElementById("panelAlertTitle");
+const btnAlertClose = document.getElementById("btnAlertClose");
+const panelAlertContent = document.getElementById("panelAlertContent");
 const tabHome = document.getElementById("tabHome");
 const tabHeat = document.getElementById("tabHeat");
 const tabMap = document.getElementById("tabMap");
@@ -51,6 +55,10 @@ tabCommunity.onclick = () => {
 
 tabProfile.onclick = () => {
     openPage("profile");
+}
+
+btnAlertClose.onclick = () => {
+    panelAlert.style.display = "none";
 }
 
 async function openPage(page) {
@@ -303,7 +311,7 @@ async function openPage(page) {
                 lng: position.coords.longitude
             };
 
-            const map = new google.maps.Map(pageMap, {
+            const map = new google.maps.Map(panelMap, {
                 zoom: 13,
                 center: location,
                 mapId: "DEMO_MAP_ID"
@@ -446,6 +454,11 @@ async function openPage(page) {
                     anchor: marker,
                     map: map,
                 });
+
+                if (data.heatIndex == null) {
+                    marker.map = null;
+                    showAlert("Error", "Heat index could not be calculated for this location.\n(Maybe due to data license restrictions and local market protections.)");
+                }
             });
 
             pageLoader.style.display = "none";
@@ -467,10 +480,12 @@ function convertHour(hour24) {
  */
 function getHeatIndexColor(heatIndex) {
     const stops = [
-        { value: 27, color: [255, 235, 59] },   // Yellow
-        { value: 32, color: [255, 193, 7] },    // Amber
-        { value: 41, color: [255, 87, 34] },    // Deep Orange
-        { value: 54, color: [183, 28, 28] }     // Dark Red
+        { value: 20, color: [76, 175, 80] },    // Green
+        { value: 28, color: [255, 235, 59] },   // Yellow
+        { value: 34, color: [255, 167, 38] },   // Orange
+        { value: 40, color: [244, 67, 54] },    // Red
+        { value: 46, color: [183, 28, 28] },    // Dark Red
+        { value: 55, color: [74, 20, 140] }     // Purple
     ];
 
     // Clamp below minimum
@@ -498,4 +513,10 @@ function getHeatIndexColor(heatIndex) {
             return `rgb(${r}, ${g}, ${bColor})`;
         }
     }
+}
+
+function showAlert(title, content) {
+    panelAlertTitle.textContent = title;
+    panelAlertContent.textContent = content;
+    panelAlert.style.display = "flex";
 }
