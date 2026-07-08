@@ -20,33 +20,28 @@ switch ($_GET["action"]) {
     case "analyze_heat_location":
         $db = new SQLite3("database.db");
         $response = fetch("https://weather.googleapis.com/v1/currentConditions:lookup?key={$GOOGLE_API_KEY}&location.latitude={$data["latitude"]}&location.longitude={$data["longitude"]}");
-        
         $heatIndex = $response["json"]["heatIndex"]["degrees"] ?? null;
 
-        $query = <<<SQL
+        executePreparedQuery($db, <<<SQL
             DELETE FROM `heat_locations`
             WHERE (`latitude` > :latitude - 0.001 AND `latitude` < :latitude + 0.001
             AND `longitude` > :longitude - 0.001 AND `longitude` < :longitude + 0.001)
             OR `time` < :time - 3600
             OR `heat_index` IS NULL;
-        SQL;
+        SQL, [
+            ":latitude" => $data["latitude"],
+            ":longitude" => $data["longitude"],
+            ":time" => time()
+        ]);
 
-        $stmt = $db->prepare($query);
-        $stmt->bindValue(":latitude", $data["latitude"]);
-        $stmt->bindValue(":longitude", $data["longitude"]);
-        $stmt->bindValue(":time", time());
-        $stmt->execute();
-        
-        $query = <<<SQL
+        executePreparedQuery($db, <<<SQL
             INSERT INTO `heat_locations` (`heat_index`, `latitude`, `longitude`)
             VALUES (:heat_index, :latitude, :longitude);
-        SQL;
-
-        $stmt = $db->prepare($query);
-        $stmt->bindValue(":heat_index", $heatIndex);
-        $stmt->bindValue(":latitude", $data["latitude"]);
-        $stmt->bindValue(":longitude", $data["longitude"]);
-        $stmt->execute();
+        SQL, [
+            ":heat_index" => $heatIndex,
+            ":latitude" => $data["latitude"],
+            ":longitude" => $data["longitude"]
+        ]);
 
         echo json_encode([
             "heatIndex" => $heatIndex,
@@ -59,22 +54,18 @@ switch ($_GET["action"]) {
     case "get_heat_locations":
         $db = new SQLite3("database.db");
 
-        $query = <<<SQL
+        executePreparedQuery($db, <<<SQL
             DELETE FROM `heat_locations`
             WHERE `time` < :time - 3600
             OR `heat_index` IS NULL;
-        SQL;
+        SQL, [
+            ":time" => time()
+        ]);
 
-        $stmt = $db->prepare($query);
-        $stmt->bindValue(":time", time());
-        $stmt->execute();
-
-        $query = <<<SQL
+        $result = executePreparedQuery($db, <<<SQL
             SELECT * FROM `heat_locations`
-        SQL;
+        SQL);
 
-        $stmt = $db->prepare($query);
-        $result = $stmt->execute();
         $heatLocations = [];
 
         while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
@@ -82,6 +73,23 @@ switch ($_GET["action"]) {
         }
 
         echo json_encode($heatLocations);
+        return;
+    case "profile":
+        if (!isset($_COOKIE["session"])) {
+            http_response_code(401);
+            echo json_encode(false);
+            return;
+        }
+
+        $db = new SQLite3("database.db");
+
+        $user = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `users` WHERE `session` = :session;
+        SQL, [
+            ":session" => $_COOKIE["session"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
+        echo json_encode($user);
         return;
     default:
         http_response_code(404);
