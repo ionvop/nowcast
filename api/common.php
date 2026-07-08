@@ -90,3 +90,13 @@ function fetch(string $url, array $options = []): array {
         'json' => json_decode($bodyString, true)
     ];
 }
+
+function executePreparedQuery(SQLite3 $db, string $query, array $values = []): SQLite3Result {
+    $stmt = $db->prepare($query);
+    
+    foreach ($values as $param => $value) {
+        $stmt->bindValue($param, $value);
+    }
+    
+    return $stmt->execute();
+}
