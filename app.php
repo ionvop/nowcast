@@ -50,7 +50,7 @@ require_once "api/config.php";
                 overflow: hidden;
                 background-color: #eef;">
                 <div style="
-                    display: flex;
+                    display: none;
                     align-items: center;
                     justify-content: center;
                     height: 100%;
@@ -78,6 +78,7 @@ require_once "api/config.php";
                     </div>
                 </div>
                 <div style="
+                    display: none;
                     height: 100%;
                     box-sizing: border-box;
                     overflow: auto;"
@@ -132,6 +133,7 @@ require_once "api/config.php";
                     </div>
                 </div>
                 <div style="
+                    display: none;
                     height: 100%;
                     box-sizing: border-box;
                     overflow: auto;"
@@ -148,6 +150,7 @@ require_once "api/config.php";
                     </div>
                 </div>
                 <div style="
+                    display: none;
                     position: relative;
                     height: 100%;
                     box-sizing: border-box;"
@@ -207,6 +210,127 @@ require_once "api/config.php";
 
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div style="
+                    display: none;
+                    position: relative;
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pageCommunity">
+                    <div style="
+                        position: absolute;
+                        top: 0rem;
+                        left: 0rem;
+                        width: 100%;
+                        height: 100%;
+                        box-sizing: border-box;"
+                        id="panelPosts">
+
+                    </div>
+                    <div style="
+                        display: none;
+                        position: absolute;
+                        bottom: 0rem;
+                        right: 0rem;
+                        padding: 1rem;"
+                        id="panelNewPost">
+                        <button id="btnNewPost">
+                            <div style="
+                                display: grid;
+                                grid-template-columns: max-content 1fr;">
+                                <div style="
+                                    display: flex;
+                                    align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M160-120q-17 0-28.5-11.5T120-160v-97q0-16 6-30.5t17-25.5l505-504q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L313-143q-11 11-25.5 17t-30.5 6h-97Zm544-528 56-56-56-56-56 56 56 56Z"/></svg>
+                                </div>
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    padding-left: 0.5rem;">
+                                    New Post
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div style="
+                    display: none;
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pageLogin">
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        box-sizing: border-box;">
+                        <button class="gsi-material-button" id="btnLogin">
+                            <div class="gsi-material-button-state"></div>
+                            <div class="gsi-material-button-content-wrapper">
+                                <div class="gsi-material-button-icon">
+                                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" style="display: block;">
+                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                                        <path fill="none" d="M0 0h48v48H0z"></path>
+                                    </svg>
+                                </div>
+                                <span class="gsi-material-button-contents">Sign in with Google</span>
+                                <span style="display: none;">Sign in with Google</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div style="
+                    display: none;
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pageProfile">
+                    <div style="
+                        padding: 1rem;
+                        text-align: center;">
+                        <img style="
+                            width: 10rem;
+                            height: 10rem;
+                            object-fit: cover;
+                            border-radius: 50%;"
+                            src=""
+                            id="imgAvatar">
+                    </div>
+                    <div style="
+                        padding: 1rem;
+                        padding-top: 0rem;
+                        text-align: center;
+                        font-size: 1.5rem;
+                        font-weight: bold;"
+                        id="panelName">
+
+                    </div>
+                    <div style="
+                        padding: 1rem;
+                        text-align: center;">
+                        <button id="btnLogout">
+                            <div style="
+                                display: grid;
+                                grid-template-columns: max-content 1fr;">
+                                <div style="
+                                    display: flex;
+                                    align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h240q17 0 28.5 11.5T480-160q0 17-11.5 28.5T440-120H200Zm487-320H400q-17 0-28.5-11.5T360-480q0-17 11.5-28.5T400-520h287l-75-75q-11-11-11-27t11-28q11-12 28-12.5t29 11.5l143 143q12 12 12 28t-12 28L669-309q-12 12-28.5 11.5T612-310q-11-12-10.5-28.5T613-366l74-74Z"/></svg>
+                                </div>
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    padding-left: 0.5rem;">
+                                    Logout
+                                </div>
+                            </div>
+                        </button>
                     </div>
                 </div>
             </div>
