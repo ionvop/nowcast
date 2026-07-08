@@ -16,6 +16,16 @@ const panelAlert = document.getElementById("panelAlert");
 const panelAlertTitle = document.getElementById("panelAlertTitle");
 const btnAlertClose = document.getElementById("btnAlertClose");
 const panelAlertContent = document.getElementById("panelAlertContent");
+const pageCommunity = document.getElementById("pageCommunity");
+const panelPosts = document.getElementById("panelPosts");
+const panelNewPost = document.getElementById("panelNewPost");
+const btnNewPost = document.getElementById("btnNewPost");
+const pageLogin = document.getElementById("pageLogin");
+const btnLogin = document.getElementById("btnLogin");
+const pageProfile = document.getElementById("pageProfile");
+const imgAvatar = document.getElementById("imgAvatar");
+const panelName = document.getElementById("panelName");
+const btnLogout = document.getElementById("btnLogout");
 const tabHome = document.getElementById("tabHome");
 const tabHeat = document.getElementById("tabHeat");
 const tabMap = document.getElementById("tabMap");
@@ -26,11 +36,14 @@ let controller;
 let currentPage = "home";
 
 (async () => {
-    openPage("home");
-
-    const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get("page");
+    
+    if (page) {
+        openPage(page);
+    } else {
+        openPage("home");
+    }
 })();
 
 btnReload.onclick = () => {
@@ -61,13 +74,22 @@ btnAlertClose.onclick = () => {
     panelAlert.style.display = "none";
 }
 
+btnLogin.onclick = () => {
+    location.href = "api/action.php?method=login";
+}
+
+btnLogout.onclick = () => {
+    location.href = "api/action.php?method=logout";
+}
+
 async function openPage(page) {
     controller?.abort();
     controller = new AbortController();
     const signal = controller.signal;
     panelLoader.textContent = "Loading...";
+    currentPage = page;
 
-    for (const page of [pageLoader, pageHome, pageHeat, pageMap]) {
+    for (const page of [pageLoader, pageHome, pageHeat, pageMap, pageCommunity, pageLogin, pageProfile]) {
         page.style.display = "none";
     }
     
@@ -80,7 +102,7 @@ async function openPage(page) {
             pageLoader.style.display = "flex";
             tabHome.style.color = "var(--theme)";
             panelTitle.textContent = "Home";
-            currentPage = "home";
+            panelLoader.textContent = "Loading geolocation... (1/4)";
 
             const position = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -90,7 +112,7 @@ async function openPage(page) {
             const longitude = position.coords.longitude;
 
             {
-                panelLoader.textContent = "Loading weather... (1/3)";
+                panelLoader.textContent = "Loading weather... (2/4)";
 
                 const response = await fetch("api/?action=weather", {
                     method: "post",
@@ -112,7 +134,7 @@ async function openPage(page) {
             }
 
             {
-                panelLoader.textContent = "Loading city... (2/3)";
+                panelLoader.textContent = "Loading city... (3/4)";
 
                 const response = await fetch("api/?action=geocode", {
                     method: "post",
@@ -132,7 +154,7 @@ async function openPage(page) {
             }
 
             {
-                panelLoader.textContent = "Loading forecast... (3/3)";
+                panelLoader.textContent = "Loading forecast... (4/4)";
 
                 const response = await fetch("api/?action=forecast", {
                     method: "post",
@@ -193,7 +215,7 @@ async function openPage(page) {
             pageLoader.style.display = "flex";
             tabHeat.style.color = "var(--theme)";
             panelTitle.textContent = "Heat Data";
-            currentPage = "heat";
+            panelLoader.textContent = "Loading geolocation... (1/2)";
 
             const position = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -203,7 +225,7 @@ async function openPage(page) {
             const longitude = position.coords.longitude;
 
             {
-                panelLoader.textContent = "Loading data...";
+                panelLoader.textContent = "Loading data... (2/2)";
 
                 const response = await fetch("api/?action=forecast", {
                     method: "post",
@@ -300,7 +322,7 @@ async function openPage(page) {
             pageLoader.style.display = "flex";
             tabMap.style.color = "var(--theme)";
             panelTitle.textContent = "Map";
-            currentPage = "map";
+            panelLoader.textContent = "Loading geolocation... (1/2)";
 
             const position = await new Promise((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -318,7 +340,7 @@ async function openPage(page) {
             });
 
             {
-                panelLoader.textContent = "Loading map...";
+                panelLoader.textContent = "Loading map... (2/2)";
 
                 const response = await fetch("api/?action=get_heat_locations", {
                     method: "post",
@@ -463,6 +485,58 @@ async function openPage(page) {
 
             pageLoader.style.display = "none";
             pageMap.style.display = "block";
+        } break;
+        case "community": {
+            pageLoader.style.display = "flex";
+            tabCommunity.style.color = "var(--theme)";
+            panelTitle.textContent = "Profile";
+            panelNewPost.style.display = "none";
+
+            {
+                panelLoader.textContent = "Loading profile...";
+
+                const response = await fetch("api/?action=profile", {
+                    method: "get",
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                if (data != false) {
+                    panelNewPost.style.display = "block";
+                }
+            }
+
+            pageLoader.style.display = "none";
+            pageCommunity.style.display = "block";
+        } break;
+        case "profile": {
+            pageLoader.style.display = "flex";
+            tabProfile.style.color = "var(--theme)";
+            panelTitle.textContent = "Profile";
+
+            {
+                panelLoader.textContent = "Loading profile...";
+
+                const response = await fetch("api/?action=profile", {
+                    method: "get",
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+
+                if (data == false) {
+                    pageLoader.style.display = "none";
+                    pageLogin.style.display = "block";
+                } else {
+                    imgAvatar.src = data.avatar;
+                    panelName.textContent = data.name;
+                    pageLoader.style.display = "none";
+                    pageProfile.style.display = "block";
+                }
+            }
         } break;
     }
 }
