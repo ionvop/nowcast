@@ -3,6 +3,7 @@
 require_once "common.php";
 header("Content-Type: application/json");
 $data = json_decode(file_get_contents("php://input"), true);
+$db = new SQLite3("database.db");
 
 switch ($_GET["action"]) {
     case "weather":
@@ -18,7 +19,6 @@ switch ($_GET["action"]) {
         echo json_encode($response["json"]);
         return;
     case "analyze_heat_location":
-        $db = new SQLite3("database.db");
         $response = fetch("https://weather.googleapis.com/v1/currentConditions:lookup?key={$GOOGLE_API_KEY}&location.latitude={$data["latitude"]}&location.longitude={$data["longitude"]}");
         $heatIndex = $response["json"]["heatIndex"]["degrees"] ?? null;
 
@@ -52,8 +52,6 @@ switch ($_GET["action"]) {
 
         return;
     case "get_heat_locations":
-        $db = new SQLite3("database.db");
-
         executePreparedQuery($db, <<<SQL
             DELETE FROM `heat_locations`
             WHERE `time` < :time - 3600
@@ -81,8 +79,6 @@ switch ($_GET["action"]) {
             return;
         }
 
-        $db = new SQLite3("database.db");
-
         $user = executePreparedQuery($db, <<<SQL
             SELECT * FROM `users` WHERE `session` = :session;
         SQL, [
@@ -90,6 +86,64 @@ switch ($_GET["action"]) {
         ])->fetchArray(SQLITE3_ASSOC);
 
         echo json_encode($user);
+        return;
+    case "newPost":
+        $user = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `users` WHERE `session` = :session;
+        SQL, [
+            ":session" => $_COOKIE["session"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(["details" => "Unauthorized."]);
+            return;
+        }
+
+        executePreparedQuery($db, <<<SQL
+            INSERT INTO `posts` (`user_id`, `content`)
+            VALUES (:user_id, :content);
+        SQL, [
+            ":user_id" => $user["id"],
+            ":content" => $data["content"]
+        ]);
+
+        http_response_code(201);
+        echo json_encode(["details" => "Post created."]);
+        return;
+    case "getPosts":
+        executePreparedQuery($db, <<<SQL
+            DELETE FROM `posts` WHERE `time` < :time;
+        SQL, [
+            ":time" => time() - 86400
+        ]);
+
+        $result = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `posts`
+        SQL);
+
+        $posts = [];
+
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $row["user"] = executePreparedQuery($db, <<<SQL
+                SELECT * FROM `users` WHERE `id` = :id;
+            SQL, [
+                ":id" => $row["user_id"]
+            ])->fetchArray(SQLITE3_ASSOC);
+
+            $posts[] = $row;
+        }
+
+        echo json_encode($posts);
+        return;
+    case "getPost":
+        $post = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `posts` WHERE `id` = :id;
+        SQL, [
+            ":id" => $data["id"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
+        echo json_encode($post);
         return;
     default:
         http_response_code(404);
