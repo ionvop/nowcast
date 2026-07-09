@@ -526,7 +526,7 @@ async function openPage(page) {
         case "community": {
             pageLoader.style.display = "flex";
             tabCommunity.style.color = "var(--theme)";
-            panelTitle.textContent = "Profile";
+            panelTitle.textContent = "Community";
             panelNewPost.style.display = "none";
 
             {
