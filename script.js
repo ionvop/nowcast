@@ -20,6 +20,15 @@ const pageCommunity = document.getElementById("pageCommunity");
 const panelPosts = document.getElementById("panelPosts");
 const panelNewPost = document.getElementById("panelNewPost");
 const btnNewPost = document.getElementById("btnNewPost");
+const pageNewPost = document.getElementById("pageNewPost");
+const inputPost = document.getElementById("inputPost");
+const btnPost = document.getElementById("btnPost");
+const pagePost = document.getElementById("pagePost");
+const imgPostAvatar = document.getElementById("imgPostAvatar");
+const panelPostName = document.getElementById("panelPostName");
+const panelPostTime = document.getElementById("panelPostTime");
+const panelPostContent = document.getElementById("panelPostContent");
+const btnDelete = document.getElementById("btnDelete");
 const pageLogin = document.getElementById("pageLogin");
 const btnLogin = document.getElementById("btnLogin");
 const pageProfile = document.getElementById("pageProfile");
@@ -45,6 +54,13 @@ let currentPage = "home";
         openPage("home");
     }
 })();
+
+setInterval(() => {
+    for (let element of document.body.querySelectorAll("*")) {
+        element.style.setProperty("--test", "test");
+        element.style.removeProperty("--test");
+    }
+}, 1000);
 
 btnReload.onclick = () => {
     openPage(currentPage);
@@ -74,6 +90,27 @@ btnAlertClose.onclick = () => {
     panelAlert.style.display = "none";
 }
 
+btnNewPost.onclick = () => {
+    openPage("newPost");
+}
+
+btnPost.onclick = async () => {
+    inputPost.disabled = true;
+    btnPost.disabled = true;
+
+    const response = await fetch("api/?action=newPost", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            content: inputPost.value
+        })
+    });
+
+    openPage("community");
+}
+
 btnLogin.onclick = () => {
     location.href = "api/action.php?method=login";
 }
@@ -89,7 +126,7 @@ async function openPage(page) {
     panelLoader.textContent = "Loading...";
     currentPage = page;
 
-    for (const page of [pageLoader, pageHome, pageHeat, pageMap, pageCommunity, pageLogin, pageProfile]) {
+    for (const page of [pageLoader, pageHome, pageHeat, pageMap, pageCommunity, pageNewPost, pagePost, pageLogin, pageProfile]) {
         page.style.display = "none";
     }
     
@@ -508,8 +545,88 @@ async function openPage(page) {
                 }
             }
 
+            {
+                panelLoader.textContent = "Loading posts...";
+
+                const response = await fetch("api/?action=getPosts", {
+                    method: "get",
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+                panelPosts.innerHTML = "";
+
+                for (const post of data) {
+                    panelPosts.innerHTML = /*html*/`
+                        <div style="
+                            padding: 1rem;
+                            padding-top: 0rem;">
+                            <div style="
+                                border: 1px solid var(--theme);
+                                border-radius: 1rem;
+                                background-color: #fff;">
+                                <div style="
+                                    display: grid;
+                                    grid-template-columns: max-content 1fr max-content;
+                                    border-bottom: 1px solid #555;">
+                                    <div style="
+                                        display: flex;
+                                        align-items: center;
+                                        padding: 1rem;">
+                                        <img style="
+                                            width: 2rem;
+                                            height: 2rem;
+                                            object-fit: cover;
+                                            border-radius: 50%;"
+                                            src="${post.user.avatar}">
+                                    </div>
+                                    <div style="
+                                        display: flex;
+                                        align-items: center;
+                                        padding: 1rem;
+                                        padding-left: 0rem;
+                                        font-weight: bold;
+                                        overflow: hidden;">
+                                        ${escapeHtml(post.user.name)}
+                                    </div>
+                                    <div style="
+                                        display: flex;
+                                        align-items: center;
+                                        padding: 1rem;
+                                        font-size: 0.7rem;
+                                        color: #555;">
+                                        ${timeAgo(post.time)}
+                                    </div>
+                                </div>
+                                <div style="
+                                    padding: 1rem;">
+                                    <div style="
+                                        display: -webkit-box;
+                                        -webkit-box-orient: vertical;
+                                        -webkit-line-clamp: 3;
+                                        overflow: hidden;
+                                        white-space: pre-line;">${escapeHtml(post.content)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        ${panelPosts.innerHTML}
+                    `;
+                }
+            }
+
             pageLoader.style.display = "none";
             pageCommunity.style.display = "block";
+        } break;
+        case "newPost": {
+            pageLoader.style.display = "flex";
+            tabCommunity.style.color = "var(--theme)";
+            panelTitle.textContent = "New Post";
+            inputPost.value = "";
+            inputPost.disabled = false;
+            btnPost.disabled = false;
+            pageLoader.style.display = "none";
+            pageNewPost.style.display = "block";
         } break;
         case "profile": {
             pageLoader.style.display = "flex";
@@ -593,4 +710,42 @@ function showAlert(title, content) {
     panelAlertTitle.textContent = title;
     panelAlertContent.textContent = content;
     panelAlert.style.display = "flex";
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function timeAgo(unixTimestamp) {
+    // Convert Unix timestamp (seconds) to JavaScript milliseconds
+    const timestampMs = unixTimestamp * 1000;
+    const now = Date.now();
+    const secondsAgo = Math.floor((now - timestampMs) / 1000);
+
+    if (secondsAgo < 0) return "in the future";
+    if (secondsAgo < 10) return "just now";
+
+    // Define time intervals in seconds
+    const intervals = {
+        year: 31536000,
+        month: 2592000,
+        week: 604800,
+        day: 86400,
+        hour: 3600,
+        minute: 60,
+        second: 1
+    };
+
+    // Find the appropriate unit
+    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+        const count = Math.floor(secondsAgo / secondsInUnit);
+        if (count >= 1) {
+            return `${count} ${unit}${count > 1 ? 's' : ''} ago`;
+        }
+    }
 }
