@@ -50,7 +50,7 @@ require_once "api/config.php";
                 overflow: hidden;
                 background-color: #eef;">
                 <div style="
-                    display: none;
+                    display: flex;
                     align-items: center;
                     justify-content: center;
                     height: 100%;
@@ -73,7 +73,7 @@ require_once "api/config.php";
                             text-align: center;
                             color: #555;"
                             id="panelLoader">
-
+                            Loading app...
                         </div>
                     </div>
                 </div>
@@ -225,6 +225,7 @@ require_once "api/config.php";
                         left: 0rem;
                         width: 100%;
                         height: 100%;
+                        padding-top: 1rem;
                         box-sizing: border-box;"
                         id="panelPosts">
 
@@ -253,6 +254,109 @@ require_once "api/config.php";
                                 </div>
                             </div>
                         </button>
+                    </div>
+                </div>
+                <div style="
+                    display: none;
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pageNewPost">
+                    <div style="
+                        display: grid;
+                        grid-template-rows: 1fr max-content;
+                        height: 100%;
+                        box-sizing: border-box;">
+                        <div style="
+                            padding: 1rem;">
+                            <textarea id="inputPost"
+                                placeholder="What's on your mind?"></textarea>
+                        </div>
+                        <div style="
+                            display: grid;
+                            grid-template-columns: 1fr max-content;">
+                            <div></div>
+                            <div style="
+                                padding: 1rem;
+                                padding-top: 0rem;">
+                                <button id="btnPost">
+                                    <div style="
+                                        display: grid;
+                                        grid-template-columns: max-content 1fr;">
+                                        <div style="
+                                            display: flex;
+                                            align-items: center;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M176-183q-20 8-38-3.5T120-220v-180l320-80-320-80v-180q0-22 18-33.5t38-3.5l616 260q25 11 25 37t-25 37L176-183Z"/></svg>
+                                        </div>
+                                        <div style="
+                                            display: flex;
+                                            align-items: center;
+                                            padding-left: 0.5rem;">
+                                            Post
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="
+                    display: none;
+                    height: 100%;
+                    box-sizing: border-box;
+                    overflow: auto;"
+                    id="pagePost">
+                    <div style="
+                        display: grid;
+                        grid-template-columns: max-content 1fr max-content;
+                        border-bottom: 1px solid #555;">
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            padding: 1rem;">
+                            <img style="
+                                width: 2rem;
+                                height: 2rem;
+                                object-fit: cover;
+                                border-radius: 50%;"
+                                src=""
+                                id="imgPostAvatar">
+                        </div>
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            padding: 1rem;
+                            padding-left: 0rem;"
+                            id="panelPostName">
+
+                        </div>
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            padding: 1rem;
+                            font-size: 0.7rem;
+                            color: #555;"
+                            id="panelPostTime">
+
+                        </div>
+                    </div>
+                    <div style="
+                        padding: 1rem;
+                        white-space: pre-line"
+                        id="panelPostContent">
+                    
+                    </div>
+                    <div style="
+                        display: grid;
+                        grid-template-columns: 1fr max-content;">
+                        <div></div>
+                        <div style="
+                            display: none;
+                            padding: 1rem;"
+                            id="btnDelete"
+                            data-id="">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e31f1f"><path d="M280-120q-33 0-56.5-23.5T200-200v-520q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h160q0-17 11.5-28.5T400-840h160q17 0 28.5 11.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720v520q0 33-23.5 56.5T680-120H280Zm148.5-171.5Q440-303 440-320v-280q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v280q0 17 11.5 28.5T400-280q17 0 28.5-11.5Zm160 0Q600-303 600-320v-280q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v280q0 17 11.5 28.5T560-280q17 0 28.5-11.5Z"/></svg>
+                        </div>
                     </div>
                 </div>
                 <div style="
