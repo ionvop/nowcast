@@ -274,8 +274,26 @@ require_once "api/config.php";
                         </div>
                         <div style="
                             display: grid;
-                            grid-template-columns: 1fr max-content;">
-                            <div></div>
+                            grid-template-columns: max-content 1fr max-content;">
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                padding: 1rem;
+                                padding-top: 0rem;">
+                                <label class="switch">
+                                    <input type="checkbox"
+                                        id="chkLocation">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                padding: 1rem;
+                                padding-top: 0rem;
+                                padding-left: 0rem;">
+                                Include my current location
+                            </div>
                             <div style="
                                 padding: 1rem;
                                 padding-top: 0rem;">
@@ -307,55 +325,70 @@ require_once "api/config.php";
                     overflow: auto;"
                     id="pagePost">
                     <div style="
-                        display: grid;
-                        grid-template-columns: max-content 1fr max-content;
-                        border-bottom: 1px solid #555;">
+                        padding: 1rem;">
                         <div style="
-                            display: flex;
-                            align-items: center;
-                            padding: 1rem;">
-                            <img style="
-                                width: 2rem;
-                                height: 2rem;
-                                object-fit: cover;
-                                border-radius: 50%;"
-                                src=""
-                                id="imgPostAvatar">
-                        </div>
-                        <div style="
-                            display: flex;
-                            align-items: center;
-                            padding: 1rem;
-                            padding-left: 0rem;"
-                            id="panelPostName">
+                            background-color: #fff;
+                            border-radius: 1rem;
+                            border: 1px solid var(--theme);
+                            overflow: hidden;">
+                            <div style="
+                                display: grid;
+                                grid-template-columns: max-content 1fr max-content;
+                                border-bottom: 1px solid #555;">
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    padding: 1rem;">
+                                    <img style="
+                                        width: 2rem;
+                                        height: 2rem;
+                                        object-fit: cover;
+                                        border-radius: 50%;"
+                                        src=""
+                                        id="imgPostAvatar">
+                                </div>
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    padding: 1rem;
+                                    padding-left: 0rem;"
+                                    id="panelPostName">
 
-                        </div>
-                        <div style="
-                            display: flex;
-                            align-items: center;
-                            padding: 1rem;
-                            font-size: 0.7rem;
-                            color: #555;"
-                            id="panelPostTime">
+                                </div>
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    padding: 1rem;
+                                    font-size: 0.7rem;
+                                    color: #555;"
+                                    id="panelPostTime">
 
-                        </div>
-                    </div>
-                    <div style="
-                        padding: 1rem;
-                        white-space: pre-line"
-                        id="panelPostContent">
-                    
-                    </div>
-                    <div style="
-                        display: grid;
-                        grid-template-columns: 1fr max-content;">
-                        <div></div>
-                        <div style="
-                            display: none;
-                            padding: 1rem;"
-                            id="btnDelete"
-                            data-id="">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e31f1f"><path d="M280-120q-33 0-56.5-23.5T200-200v-520q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h160q0-17 11.5-28.5T400-840h160q17 0 28.5 11.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720v520q0 33-23.5 56.5T680-120H280Zm148.5-171.5Q440-303 440-320v-280q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v280q0 17 11.5 28.5T400-280q17 0 28.5-11.5Zm160 0Q600-303 600-320v-280q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v280q0 17 11.5 28.5T560-280q17 0 28.5-11.5Z"/></svg>
+                                </div>
+                            </div>
+                            <div style="
+                                padding: 1rem;
+                                white-space: pre-line"
+                                id="panelPostContent">
+                            
+                            </div>
+                            <div style="
+                                display: grid;
+                                grid-template-columns: 1fr max-content;">
+                                <div style="
+                                    padding: 1rem;
+                                    color: #555;
+                                    font-size: 0.7rem;"
+                                    id="panelPostLocation">
+
+                                </div>
+                                <div style="
+                                    display: none;
+                                    padding: 1rem;"
+                                    id="btnDelete"
+                                    data-id="">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e31f1f"><path d="M280-120q-33 0-56.5-23.5T200-200v-520q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h160q0-17 11.5-28.5T400-840h160q17 0 28.5 11.5T600-800h160q17 0 28.5 11.5T800-760q0 17-11.5 28.5T760-720v520q0 33-23.5 56.5T680-120H280Zm148.5-171.5Q440-303 440-320v-280q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v280q0 17 11.5 28.5T400-280q17 0 28.5-11.5Zm160 0Q600-303 600-320v-280q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v280q0 17 11.5 28.5T560-280q17 0 28.5-11.5Z"/></svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
