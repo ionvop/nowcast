@@ -101,11 +101,14 @@ switch ($_GET["action"]) {
         }
 
         executePreparedQuery($db, <<<SQL
-            INSERT INTO `posts` (`user_id`, `content`)
-            VALUES (:user_id, :content);
+            INSERT INTO `posts` (`user_id`, `content`, `address`, `latitude`, `longitude`)
+            VALUES (:user_id, :content, :address, :latitude, :longitude);
         SQL, [
             ":user_id" => $user["id"],
-            ":content" => $data["content"]
+            ":content" => $data["content"],
+            ":address" => $data["address"],
+            ":latitude" => $data["latitude"],
+            ":longitude" => $data["longitude"]
         ]);
 
         http_response_code(201);
@@ -143,7 +146,53 @@ switch ($_GET["action"]) {
             ":id" => $data["id"]
         ])->fetchArray(SQLITE3_ASSOC);
 
+        $post["user"] = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `users` WHERE `id` = :id;
+        SQL, [
+            ":id" => $post["user_id"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
         echo json_encode($post);
+        return;
+    case "deletePost":
+        $user = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `users` WHERE `session` = :session;
+        SQL, [
+            ":session" => $_COOKIE["session"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(["details" => "Unauthorized."]);
+            return;
+        }
+
+        $post = executePreparedQuery($db, <<<SQL
+            SELECT * FROM `posts` WHERE `id` = :id;
+        SQL, [
+            ":id" => $data["id"]
+        ])->fetchArray(SQLITE3_ASSOC);
+
+        if (!$post) {
+            http_response_code(404);
+            echo json_encode(["details" => "Post not found."]);
+            return;
+        }
+
+        if ($post["user_id"] != $user["id"]) {
+            http_response_code(401);
+            echo json_encode(["details" => "Unauthorized."]);
+            return;
+        }
+
+        executePreparedQuery($db, <<<SQL
+            DELETE FROM `posts` WHERE `id` = :id;
+        SQL, [
+            ":id" => $data["id"]
+        ]);
+
+        http_response_code(200);
+        echo json_encode(["details" => "Post deleted."]);
         return;
     default:
         http_response_code(404);
