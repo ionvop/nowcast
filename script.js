@@ -22,12 +22,14 @@ const panelNewPost = document.getElementById("panelNewPost");
 const btnNewPost = document.getElementById("btnNewPost");
 const pageNewPost = document.getElementById("pageNewPost");
 const inputPost = document.getElementById("inputPost");
+const chkLocation = document.getElementById("chkLocation");
 const btnPost = document.getElementById("btnPost");
 const pagePost = document.getElementById("pagePost");
 const imgPostAvatar = document.getElementById("imgPostAvatar");
 const panelPostName = document.getElementById("panelPostName");
 const panelPostTime = document.getElementById("panelPostTime");
 const panelPostContent = document.getElementById("panelPostContent");
+const panelPostLocation = document.getElementById("panelPostLocation");
 const btnDelete = document.getElementById("btnDelete");
 const pageLogin = document.getElementById("pageLogin");
 const btnLogin = document.getElementById("btnLogin");
@@ -97,6 +99,36 @@ btnNewPost.onclick = () => {
 btnPost.onclick = async () => {
     inputPost.disabled = true;
     btnPost.disabled = true;
+    let latitude, longitude, address, signal;
+    
+    if (controller) {
+        signal = controller.signal;
+    }
+
+    if (chkLocation.checked) {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+
+        const response = await fetch("api/?action=geocode", {
+            method: "post",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                latitude,
+                longitude
+            }),
+            signal
+        });
+
+        const data = await response.json();
+        console.log(data);
+        address = data.results[0].formattedAddress;
+    }
 
     const response = await fetch("api/?action=newPost", {
         method: "POST",
@@ -104,7 +136,26 @@ btnPost.onclick = async () => {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            content: inputPost.value
+            content: inputPost.value,
+            address,
+            latitude,
+            longitude
+        })
+    });
+
+    openPage("community");
+}
+
+btnDelete.onclick = async () => {
+    if (confirm("Are you sure you want to delete this post?") == false) return;
+
+    const response = await fetch("api/?action=deletePost", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            id: btnDelete.dataset.id
         })
     });
 
@@ -119,7 +170,7 @@ btnLogout.onclick = () => {
     location.href = "api/action.php?method=logout";
 }
 
-async function openPage(page) {
+async function openPage(page, args = null) {
     controller?.abort();
     controller = new AbortController();
     const signal = controller.signal;
@@ -520,6 +571,13 @@ async function openPage(page) {
                 }
             });
 
+            if (args != null) {
+                map.panTo({
+                    lat: args.latitude,
+                    lng: args.longitude
+                });
+            }
+
             pageLoader.style.display = "none";
             pageMap.style.display = "block";
         } break;
@@ -565,7 +623,9 @@ async function openPage(page) {
                             <div style="
                                 border: 1px solid var(--theme);
                                 border-radius: 1rem;
-                                background-color: #fff;">
+                                background-color: #fff;"
+                                onclick="openPost(this)"
+                                data-id="${post.id}">
                                 <div style="
                                     display: grid;
                                     grid-template-columns: max-content 1fr max-content;
@@ -608,6 +668,17 @@ async function openPage(page) {
                                         overflow: hidden;
                                         white-space: pre-line;">${escapeHtml(post.content)}</div>
                                 </div>
+                                ${post.address != null ? /*html*/`
+                                    <div style="
+                                        padding: 1rem;
+                                        color: #555;
+                                        font-size: 0.7rem;"
+                                        onclick="event.stopPropagation(); openMap(this)"
+                                        data-latitude="${post.latitude}"
+                                        data-longitude="${post.longitude}">
+                                        ${escapeHtml(post.address)}
+                                    </div>
+                                ` : ""}
                             </div>
                         </div>
                         ${panelPosts.innerHTML}
@@ -625,8 +696,69 @@ async function openPage(page) {
             inputPost.value = "";
             inputPost.disabled = false;
             btnPost.disabled = false;
+            chkLocation.checked = false;
             pageLoader.style.display = "none";
             pageNewPost.style.display = "block";
+        } break;
+        case "post": {
+            pageLoader.style.display = "flex";
+            tabCommunity.style.color = "var(--theme)";
+            panelTitle.textContent = "Post";
+            
+            {
+                panelLoader.textContent = "Loading post...";
+
+                const response = await fetch("api/?action=getPost", {
+                    method: "post",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        id: args.id
+                    }),
+                    signal
+                });
+
+                const data = await response.json();
+                console.log(data);
+                imgPostAvatar.src = data.user.avatar;
+                panelPostName.textContent = data.user.name;
+                panelPostTime.textContent = timeAgo(data.time);
+                panelPostContent.textContent = data.content;
+                const userId = data.user.id;
+                btnDelete.dataset.id = data.id;
+
+                if (data.address != null) {
+                    panelPostLocation.style.display = "block";
+                    panelPostLocation.textContent = data.address;
+                    panelPostLocation.dataset.latitude = data.latitude;
+                    panelPostLocation.dataset.longitude = data.longitude;
+                    panelPostLocation.onclick = () => openMap(panelPostLocation);
+                } else {
+                    panelPostLocation.style.display = "none";
+                }
+
+                {
+                    panelLoader.textContent = "Loading user...";
+
+                    const response = await fetch("api/?action=profile", {
+                        method: "get",
+                        signal
+                    });
+
+                    const data = await response.json();
+                    console.log(data);
+
+                    if (userId == data.id) {
+                        btnDelete.style.display = "block";
+                    } else {
+                        btnDelete.style.display = "none";
+                    }
+                }
+            }
+
+            pageLoader.style.display = "none";
+            pagePost.style.display = "block";
         } break;
         case "profile": {
             pageLoader.style.display = "flex";
@@ -748,4 +880,20 @@ function timeAgo(unixTimestamp) {
             return `${count} ${unit}${count > 1 ? 's' : ''} ago`;
         }
     }
+}
+
+async function openMap(element) {
+    const latitude = element.dataset.latitude;
+    const longitude = element.dataset.longitude;
+    await openPage("map", {
+        latitude: Number(latitude),
+        longitude: Number(longitude)
+    });
+}
+
+function openPost(element) {
+    const id = element.dataset.id;
+    openPage("post", {
+        id
+    });
 }
