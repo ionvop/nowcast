@@ -29,6 +29,13 @@ switch ($_GET["method"]) {
         $email = $response["json"]["email"];
         $name = $response["json"]["name"];
         $avatar = $response["json"]["picture"];
+        $avatar = $response["json"]["picture"];
+        $avatarResponse = fetch($avatar);
+        
+        if ($avatarResponse["ok"]) {
+            $mimeType = $avatarResponse["headers"]["Content-Type"] ?? "image/jpeg";
+            $avatar = "data:{$mimeType};base64," . base64_encode($avatarResponse["body"]);
+        }
 
         $user = executePreparedQuery($db, <<<SQL
             SELECT * FROM `users` WHERE `email` = :email;
