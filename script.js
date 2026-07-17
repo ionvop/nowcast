@@ -1,3 +1,4 @@
+const btnProfile = document.getElementById("btnProfile");
 const panelTitle = document.getElementById("panelTitle");
 const btnReload = document.getElementById("btnReload");
 const pageLoader = document.getElementById("pageLoader");
@@ -63,6 +64,10 @@ setInterval(() => {
         element.style.removeProperty("--test");
     }
 }, 1000);
+
+btnProfile.onclick = () => {
+    openPage("profile");
+};
 
 btnReload.onclick = () => {
     openPage(currentPage);
@@ -729,13 +734,15 @@ async function openPage(page, args = null) {
                 btnDelete.dataset.id = data.id;
 
                 if (data.address != null) {
-                    panelPostLocation.style.display = "block";
                     panelPostLocation.textContent = data.address;
                     panelPostLocation.dataset.latitude = data.latitude;
                     panelPostLocation.dataset.longitude = data.longitude;
                     panelPostLocation.onclick = () => openMap(panelPostLocation);
                 } else {
-                    panelPostLocation.style.display = "none";
+                    panelPostLocation.textContent = "";
+                    panelPostLocation.dataset.latitude = null;
+                    panelPostLocation.dataset.longitude = null;
+                    panelPostLocation.onclick = null;
                 }
 
                 {
