@@ -2,11 +2,13 @@ import { Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
     Home,
+    Loader2,
     Map as MapIcon,
     MessageSquare,
     RefreshCw,
     User,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -33,7 +35,26 @@ export default function AppShell({
     children: React.ReactNode;
 }) {
     const { component } = usePage();
-    const activeKey = component.toLowerCase();
+    const [navigating, setNavigating] = useState(false);
+    const [pendingKey, setPendingKey] = useState<string | null>(null);
+
+    useEffect(() => {
+        const start = () => setNavigating(true);
+        const finish = () => {
+            setNavigating(false);
+            setPendingKey(null);
+        };
+        const offStart = router.on('start', start);
+        const offFinish = router.on('finish', finish);
+
+        return () => {
+            offStart();
+            offFinish();
+        };
+    }, []);
+
+    // Highlight the tab the user clicked immediately, even before the page loads
+    const activeKey = pendingKey ?? component.toLowerCase();
     const title = TITLES[activeKey] ?? 'Nowcast';
 
     const reload = () => {
@@ -69,7 +90,13 @@ export default function AppShell({
 
             {/* Content */}
             <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 pb-24">
-                {children}
+                {navigating ? (
+                    <div className="flex min-h-[50vh] items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-theme" />
+                    </div>
+                ) : (
+                    children
+                )}
             </main>
 
             {/* Bottom nav */}
@@ -78,10 +105,12 @@ export default function AppShell({
                     {NAV_ITEMS.map((item) => {
                         const Icon = item.icon;
                         const active = activeKey === item.key;
+
                         return (
                             <Link
                                 key={item.key}
                                 href={item.href}
+                                onClick={() => setPendingKey(item.key)}
                                 className={cn(
                                     'flex flex-col items-center gap-1 py-2 text-xs font-medium transition-colors',
                                     active
