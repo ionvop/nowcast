@@ -8,4 +8,11 @@
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+
+    /* Nowcast theme */
+    --color-theme: #0af;
+    --color-theme-dark: #0099e6;
+    --color-theme-light: #e6f7ff;
+    --color-surface: #eef;
+    --color-muted: #555;
 }
