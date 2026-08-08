@@ -25,8 +25,8 @@ The app is **location-driven**: it requests the user's geolocation and uses it t
 | Database | **MySQL** (or SQLite for local dev) via Laravel Eloquent + migrations |
 | Frontend | **React** (with Vite), TypeScript recommended |
 | State / Data fetching | React Query (TanStack Query) or equivalent |
-| Routing | React Router (client-side) |
-| Styling | CSS Modules / Tailwind / styled-components — must reproduce the existing visual design |
+| Routing | **Inertia.js** (server-driven, `Route::inertia()`) |
+| Styling | Tailwind CSS + shadcn/ui — must reproduce the existing visual design |
 | Maps | **Google Maps JavaScript API** (`AdvancedMarkerElement`, `InfoWindow`) |
 | Charts | **Chart.js** (via `react-chartjs-2`) |
 | Auth | **Google OAuth 2.0** (Laravel Socialite or manual OAuth flow) |
@@ -46,7 +46,7 @@ The app is **location-driven**: it requests the user's geolocation and uses it t
   - **Reload button** (refresh icon) → re-fetches/re-renders the current page's data.
 - **Bottom nav** (5 equal columns): Home, Heat Data, Map, Community, Profile. The active tab is highlighted with the theme color.
 - A **full-page loading overlay** with a spinner and a progress label (e.g., "Loading geolocation... (1/4)") is shown while a page loads.
-- The app supports **deep-linking** via a `page` query parameter (e.g., `?page=profile`).
+- The app supports **deep-linking** via URL routes (e.g., `/profile`), handled by Inertia's server-driven routing.
 
 ### 3.2 Home Page
 
@@ -238,16 +238,18 @@ Three-step flow (server-side redirect):
 
 ## 9. Frontend Pages / Components (React)
 
-| Route | Component | Notes |
+Pages are rendered by **Inertia.js** via `Route::inertia()` in `routes/web.php`. Each page component lives under `resources/js/pages/` and uses the **persistent layout** pattern (`Page.layout = (page) => <AppShell>{page}</AppShell>`) so the shell persists across navigations.
+
+| Route (`Route::inertia`) | Component | Notes |
 |---|---|---|
 | `/` | `HomePage` | Current weather, city, hourly forecast strip |
 | `/heat` | `HeatDataPage` | Chart.js multi-series line chart |
 | `/map` | `MapPage` | Google Map + heat markers + tap-to-analyze |
 | `/community` | `CommunityPage` | Post feed + New Post FAB (if authed) |
 | `/community/new` | `NewPostPage` | Textarea + location toggle + Post |
-| `/community/:id` | `PostDetailPage` | Full post + conditional Delete |
+| `/community/{id}` | `PostDetailPage` | Full post + conditional Delete |
 | `/profile` | `ProfilePage` | Login (Google) or user info + Logout |
-| — | `AppShell` | Header + bottom nav + loading overlay |
+| — | `AppShell` | Header + bottom nav + loading overlay (persistent layout) |
 
 **Shared utilities to port:**
 - `convertHour(hour24)` → 12-hour AM/PM string.
