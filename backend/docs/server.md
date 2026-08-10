@@ -26,8 +26,9 @@ Core rules to implement everywhere they apply:
 | id | bigint PK auto | |
 | name | string | From Google userinfo |
 | email | string | Unique |
-| avatar | text | Base64 data URI of Google profile picture (inlined server-side) |
-| time | timestamp | Created at |
+| avatar | text nullable | Base64 data URI of Google profile picture (inlined server-side) |
+| created_at | timestamp | Created at |
+| updated_at | timestamp | Updated at |
 
 ### `posts`
 | Column | Type | Notes |
@@ -38,7 +39,8 @@ Core rules to implement everywhere they apply:
 | address | string nullable | Reverse-geocoded, only if user opted in |
 | latitude | decimal nullable | |
 | longitude | decimal nullable | |
-| time | timestamp | Used for 24h expiry |
+| created_at | timestamp | Used for 24h expiry |
+| updated_at | timestamp | |
 
 ### `heat_locations`
 | Column | Type | Notes |
@@ -47,15 +49,16 @@ Core rules to implement everywhere they apply:
 | heat_index | decimal nullable | Degrees Celsius |
 | latitude | decimal | |
 | longitude | decimal | |
-| time | timestamp | Used for 1h expiry |
+| created_at | timestamp | Used for 1h expiry |
+| updated_at | timestamp | |
 
 ### `personal_access_tokens` (Sanctum)
 - Standard Sanctum table for Bearer token auth.
 
 ## 3. Models & relationships
 - `User` — `hasMany(Post)`. Uses Sanctum `HasApiTokens`.
-- `Post` — `belongsTo(User)`. `$fillable`: content, address, latitude, longitude.
-- `HeatLocation` — no relationships. `$fillable`: heat_index, latitude, longitude.
+- `Post` — `belongsTo(User)`. `$fillable`: content, address, latitude, longitude. Uses the standard Eloquent `created_at`/`updated_at` timestamps.
+- `HeatLocation` — no relationships. `$fillable`: heat_index, latitude, longitude. Uses the standard Eloquent `created_at`/`updated_at` timestamps.
 
 ## 4. Services (Google API proxying)
 Create a `GoogleWeatherService` (or similar) with an HTTP client (Laravel `Http` facade) that calls:
@@ -72,7 +75,7 @@ All routes are under the `/api` prefix. Public routes need no auth; protected ro
 | POST | `/api/weather` | No | `{latitude, longitude}` | Raw Google current-conditions JSON |
 | POST | `/api/geocode` | No | `{latitude, longitude}` | Raw Google geocode JSON |
 | POST | `/api/forecast` | No | `{latitude, longitude}` | Raw Google 6h forecast JSON |
-| POST | `/api/analyze-heat-location` | No | `{latitude, longitude}` | `{heatIndex, latitude, longitude, time}` |
+| POST | `/api/analyze-heat-location` | No | `{latitude, longitude}` | `{heatIndex, latitude, longitude, createdAt}` |
 | POST | `/api/heat-locations` | No | `{}` | Array of heat_locations rows |
 | GET | `/api/profile` | Yes | — | Current user record, or 401 |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | 201 on create |
@@ -89,7 +92,7 @@ All routes are under the `/api` prefix. Public routes need no auth; protected ro
 - `201` on successful post creation.
 
 ### Behavior details
-- **`analyze-heat-location`**: fetch current heat index for the point; **delete** existing rows within ~0.001° (~100 m) of the point, rows older than 1 hour, and rows with NULL heat_index; **insert** the new reading; return `{heatIndex, latitude, longitude, time}`.
+- **`analyze-heat-location`**: fetch current heat index for the point; **delete** existing rows within ~0.001° (~100 m) of the point, rows older than 1 hour, and rows with NULL heat_index; **insert** the new reading; return `{heatIndex, latitude, longitude, createdAt}`.
 - **`heat-locations` (GET)**: purge rows older than 1 hour or with NULL heat_index; return all remaining rows.
 - **`posts` (GET)**: purge posts older than 24 hours; return all remaining posts, each with an embedded `user` object (id, name, avatar).
 - **`posts/{id}` (GET)**: return the post with embedded `user`.
