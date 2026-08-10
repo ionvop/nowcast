@@ -82,7 +82,7 @@ class GoogleWeatherService
         try {
             $response = Http::timeout(10)
                 ->retry(2, 100)
-                ->get($url, array_merge($query, ['key' => $this->apiKey()]));
+                ->get($url, $this->toQuery($query, $this->apiKey()));
         } catch (ConnectionException|RequestException) {
             throw new GoogleApiException('Google service is currently unreachable. Please try again later.');
         }
@@ -95,6 +95,48 @@ class GoogleWeatherService
         }
 
         return $response->json();
+    }
+
+    /**
+     * Flatten the payload and append the API key into a query-string array.
+     *
+     * Google's gRPC-transcoded APIs expect nested fields to be encoded with
+     * dot notation (e.g. "location.latitude") rather than PHP's bracket
+     * notation ("location[latitude]"). This converts the nested payload
+     * produced by the callers into the flat, dotted form the API requires.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    protected function toQuery(array $params, string $key): array
+    {
+        $query = $this->flatten($params);
+        $query['key'] = $key;
+
+        return $query;
+    }
+
+    /**
+     * Recursively flatten nested arrays into dot-notation keys.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    protected function flatten(array $params, string $prefix = ''): array
+    {
+        $flat = [];
+
+        foreach ($params as $name => $value) {
+            $key = $prefix === '' ? (string) $name : $prefix.'.'.$name;
+
+            if (is_array($value)) {
+                $flat = array_merge($flat, $this->flatten($value, $key));
+            } else {
+                $flat[$key] = $value;
+            }
+        }
+
+        return $flat;
     }
 
     /**
