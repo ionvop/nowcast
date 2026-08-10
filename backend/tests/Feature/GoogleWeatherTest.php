@@ -25,7 +25,8 @@ test('current conditions proxied from the Google Weather API', function (): void
 
     Http::assertSent(function ($request) {
         return str_contains($request->url(), '/v1/currentConditions:lookup')
-            && $request['location']['latitude'] == 37.7749
+            && $request['location.latitude'] == 37.7749
+            && $request['location.longitude'] == -122.4194
             && $request['key'] === 'test-google-key';
     });
 });
@@ -46,7 +47,10 @@ test('6-hour forecast proxied from the Google Weather API', function (): void {
 
     Http::assertSent(function ($request) {
         return str_contains($request->url(), '/v1/forecast/hours:lookup')
-            && $request['hours'] == 6;
+            && $request['location.latitude'] == 37.7749
+            && $request['location.longitude'] == -122.4194
+            && $request['hours'] == 6
+            && $request['key'] === 'test-google-key';
     });
 });
 
@@ -63,6 +67,13 @@ test('reverse geocoding proxied from the Google Geocode API', function (): void 
     ])->assertOk()->assertJson([
         'formattedAddress' => '1 Market St, San Francisco, CA',
     ]);
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/v4/geocode/location')
+            && $request['location.latitude'] == 37.7749
+            && $request['location.longitude'] == -122.4194
+            && $request['key'] === 'test-google-key';
+    });
 });
 
 test('validation failures return 400 with a message', function (): void {
