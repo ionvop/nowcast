@@ -87,9 +87,13 @@ All routes are under the `/api` prefix. Public routes need no auth; protected ro
 | POST | `/api/logout` | Yes | — | Revokes current token |
 
 **Status-code / contract notes** (mirroring the legacy API):
-- `401` ⇒ `{"details": "Unauthorized."}` (or `false` for `profile`).
-- `404` ⇒ `{"details": "Post not found."}` for a missing post; `{"details": "Action not found."}` for an unknown route/method.
+- `400` ⇒ `{"message": "..."}` for validation errors.
+- `401` ⇒ `{"message": "Unauthorized."}` (including `profile`).
+- `404` ⇒ `{"message": "Post not found."}` for a missing post; `{"message": "Action not found."}` for an unknown route/method.
+- `502` ⇒ `{"message": "..."}` when an upstream Google service is unreachable.
 - `201` on successful post creation.
+
+All error responses use the same Laravel-conventional shape: `{"message": "..."}`. Entity-specific text (e.g. `Post not found.` vs `Action not found.`) carries the granularity formerly held by `details`; there is no per-endpoint exception such as the legacy `false` sentinel.
 
 ### Behavior details
 - **`analyze-heat-location`**: fetch current heat index for the point; **delete** existing rows within ~0.001° (~100 m) of the point, rows older than 1 hour, and rows with NULL heat_index; **insert** the new reading; return `{heatIndex, latitude, longitude, createdAt}`.
