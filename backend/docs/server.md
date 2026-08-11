@@ -16,8 +16,8 @@ Core rules to implement everywhere they apply:
 - Create a fresh Laravel 13 application.
 - Use **SQLite** as the database (`database/database.sqlite`).
 - Install **Laravel Sanctum** for API token authentication.
-- Configure `.env` with: `GOOGLE_API_KEY`, `GOOGLE_MAPS_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (must point to the API's OAuth callback route). Never hard-code these.
-- Enable CORS for the same origin used by the web build (reverse proxy serves the Flutter web build and the API under `/api`). Native app requests do not send a browser `Origin`, so they are not subject to CORS — ensure the CORS middleware allows requests with no `Origin` (or the native calls through the proxy) so native mobile clients are not blocked.
+- Configure `.env` with: `GOOGLE_API_KEY`, `GOOGLE_MAPS_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (must point to the API's OAuth callback route), and `GOOGLE_NATIVE_SCHEME` (the custom scheme native clients use to receive the OAuth token; defaults to `nowcast`). Never hard-code these.
+- Enable CORS for the same origin used by the web build (reverse proxy serves the Flutter web build and the API under `/api`). Native app requests do not send a browser `Origin`, so they are not subject to CORS — ensure the CORS middleware allows requests with no `Origin` (or the native calls through the proxy) so native mobile clients are not blocked. This is configured in `config/cors.php` with `allowed_origins => ['*']`.
 
 ## 2. Database schema (migrations)
 ### `users`
@@ -82,8 +82,8 @@ All routes are under the `/api` prefix. Public routes need no auth; protected ro
 | GET | `/api/posts` | No | — | Array of posts with embedded `user` |
 | GET | `/api/posts/{id}` | No | — | Single post with embedded `user` |
 | DELETE | `/api/posts/{id}` | Yes | — | 200/401/404 |
-| GET | `/api/auth/google/redirect` | No | — | 302 to Google consent screen |
-| GET | `/api/auth/google/callback` | No | `?code=` | Exchanges code, issues token, redirects to app |
+| GET | `/api/auth/google/redirect` | No | `?returnTo=` | 302 to Google consent screen |
+| GET | `/api/auth/google/callback` | No | `?code=&state=` | Exchanges code, issues token, redirects to app with `#token=` (or `#error=`) |
 | POST | `/api/logout` | Yes | — | Revokes current token |
 
 **Status-code / contract notes** (mirroring the legacy API):
@@ -105,7 +105,8 @@ All error responses use the same Laravel-conventional shape: `{"message": "..."}
 
 ## 6. Google OAuth flow (server-side)
 - **Redirect**: build the Google consent URL (`accounts.google.com/o/oauth2/v2/auth`) with `client_id`, `redirect_uri`, `response_type=code`, `scope=email profile`. Redirect the browser.
-- **Callback**: exchange `code` for an access token via `oauth2.googleapis.com/token` (POST, form-encoded, with client_id/client_secret/redirect_uri/grant_type=authorization_code). Fetch userinfo from `www.googleapis.com/oauth2/v1/userinfo?access_token={token}`. Download the `picture`, inline it as a base64 data URI (`data:{mime};base64,...`). Upsert the user by email. Issue a **Sanctum token** and return it to the client (e.g., redirect to the app with the token in the URL fragment or a dedicated exchange endpoint). The client app stores the token securely.
+- **Return target (`returnTo`)**: the `/redirect` endpoint accepts an optional `returnTo` query parameter naming where the callback should send the browser (and the issued token) afterwards. It is carried through the OAuth `state` parameter so it survives the round-trip. Only the configured web origin and the native custom scheme (`GOOGLE_NATIVE_SCHEME`) are allowed; any other value falls back to the web origin to prevent open redirects.
+- **Callback**: exchange `code` for an access token via `oauth2.googleapis.com/token` (POST, form-encoded, with client_id/client_secret/redirect_uri/grant_type=authorization_code). Fetch userinfo from `www.googleapis.com/oauth2/v1/userinfo?access_token={token}`. Download the `picture`, inline it as a base64 data URI (`data:{mime};base64,...`). Upsert the user by email. Issue a **Sanctum token** and redirect the browser to the `returnTo` target with the token in the URL fragment (`#token=<sanctum-token>`); on any upstream failure it redirects with `#error=1` instead. The client app reads the fragment and stores the token securely.
 - **Redirect URI varies by platform (config-driven, never hard-coded):**
   - **Web/PWA:** `redirect_uri` is the web app page URL, and the client reads the token from the URL fragment after the callback redirect.
   - **Android / iOS (native):** `redirect_uri` is a **custom scheme or universal link** (e.g. `com.yourcompany.nowcast:/oauth2callback`). Register these URIs in the Google Cloud console's authorized redirect URIs. The API's callback accepts these and redirects back to that scheme with the token (fragment/query), which the native app intercepts via deep-link handling.
