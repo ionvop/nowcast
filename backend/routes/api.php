@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\HeatLocationController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\WeatherController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,11 +26,16 @@ Route::middleware('throttle:api')->group(function (): void {
     Route::post('/analyze-heat-location', [HeatLocationController::class, 'analyze']);
     Route::post('/heat-locations', [HeatLocationController::class, 'index']);
 
+    Route::get('/posts', [PostController::class, 'index']);
+    Route::get('/posts/{id}', [PostController::class, 'show']);
+
     Route::get('/auth/google/redirect', [GoogleOAuthController::class, 'redirect']);
     Route::get('/auth/google/callback', [GoogleOAuthController::class, 'callback']);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/posts', [PostController::class, 'store']);
+        Route::delete('/posts/{id}', [PostController::class, 'destroy']);
     });
 });
