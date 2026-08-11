@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HeatLocationController;
 use App\Http\Controllers\WeatherController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,7 @@ Route::middleware('throttle:api')->group(function (): void {
     Route::post('/weather', [WeatherController::class, 'currentConditions']);
     Route::post('/forecast', [WeatherController::class, 'forecast']);
     Route::post('/geocode', [WeatherController::class, 'geocode']);
+
+    Route::post('/analyze-heat-location', [HeatLocationController::class, 'analyze']);
+    Route::post('/heat-locations', [HeatLocationController::class, 'index']);
 });
