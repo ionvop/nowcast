@@ -10,7 +10,7 @@ beforeEach(function (): void {
 test('analyze-heat-location stores a reading and returns the heat index', function (): void {
     Http::fake([
         'weather.googleapis.com/*' => Http::response([
-            'currentConditions' => ['temperatureFeelsLike' => 41.2],
+            'currentConditions' => ['feelsLikeTemperature' => ['degrees' => 41.2, 'unit' => 'CELSIUS']],
         ], 200),
     ]);
 
@@ -18,9 +18,9 @@ test('analyze-heat-location stores a reading and returns the heat index', functi
         'latitude' => 37.7749,
         'longitude' => -122.4194,
     ])->assertOk()->assertJson([
-        'heatIndex' => '41.20',
-        'latitude' => '37.7749000',
-        'longitude' => '-122.4194000',
+        'heatIndex' => 41.2,
+        'latitude' => 37.7749,
+        'longitude' => -122.4194,
     ]);
 
     $this->assertDatabaseHas('heat_locations', [
@@ -30,10 +30,13 @@ test('analyze-heat-location stores a reading and returns the heat index', functi
     ]);
 });
 
-test('analyze-heat-location falls back to temperature when feels-like is missing', function (): void {
+test('extracts heat index from the real Google nested payload shape', function (): void {
     Http::fake([
         'weather.googleapis.com/*' => Http::response([
-            'currentConditions' => ['temperature' => 38.0],
+            'currentConditions' => [
+                'feelsLikeTemperature' => ['degrees' => 31.1, 'unit' => 'CELSIUS'],
+                'temperature' => ['degrees' => 28.5, 'unit' => 'CELSIUS'],
+            ],
         ], 200),
     ]);
 
@@ -41,7 +44,22 @@ test('analyze-heat-location falls back to temperature when feels-like is missing
         'latitude' => 37.7749,
         'longitude' => -122.4194,
     ])->assertOk()->assertJson([
-        'heatIndex' => '38.00',
+        'heatIndex' => 31.1,
+    ]);
+});
+
+test('analyze-heat-location falls back to temperature when feels-like is missing', function (): void {
+    Http::fake([
+        'weather.googleapis.com/*' => Http::response([
+            'currentConditions' => ['temperature' => ['degrees' => 38.0, 'unit' => 'CELSIUS']],
+        ], 200),
+    ]);
+
+    $this->postJson('/api/analyze-heat-location', [
+        'latitude' => 37.7749,
+        'longitude' => -122.4194,
+    ])->assertOk()->assertJson([
+        'heatIndex' => 38.0,
     ]);
 });
 
@@ -69,7 +87,7 @@ test('analyze-heat-location stores a null heat index when unavailable', function
 test('analyze-heat-location deduplicates readings within ~100 m', function (): void {
     Http::fake([
         'weather.googleapis.com/*' => Http::response([
-            'currentConditions' => ['temperatureFeelsLike' => 40.0],
+            'currentConditions' => ['feelsLikeTemperature' => ['degrees' => 40.0, 'unit' => 'CELSIUS']],
         ], 200),
     ]);
 
@@ -91,7 +109,7 @@ test('analyze-heat-location deduplicates readings within ~100 m', function (): v
 test('analyze-heat-location keeps readings farther than ~100 m', function (): void {
     Http::fake([
         'weather.googleapis.com/*' => Http::response([
-            'currentConditions' => ['temperatureFeelsLike' => 40.0],
+            'currentConditions' => ['feelsLikeTemperature' => ['degrees' => 40.0, 'unit' => 'CELSIUS']],
         ], 200),
     ]);
 
@@ -112,7 +130,7 @@ test('analyze-heat-location keeps readings farther than ~100 m', function (): vo
 test('analyze-heat-location purges stale and null readings before inserting', function (): void {
     Http::fake([
         'weather.googleapis.com/*' => Http::response([
-            'currentConditions' => ['temperatureFeelsLike' => 40.0],
+            'currentConditions' => ['feelsLikeTemperature' => ['degrees' => 40.0, 'unit' => 'CELSIUS']],
         ], 200),
     ]);
 
@@ -179,7 +197,7 @@ test('heat-locations purges stale and null readings', function (): void {
     $this->postJson('/api/heat-locations')
         ->assertOk()
         ->assertJsonCount(1)
-        ->assertJsonFragment(['latitude' => '37.7749000']);
+        ->assertJsonFragment(['latitude' => 37.7749]);
 });
 
 test('analyze-heat-location returns 502 when Google is unreachable', function (): void {
