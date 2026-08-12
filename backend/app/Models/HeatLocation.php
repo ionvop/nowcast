@@ -20,9 +20,9 @@ class HeatLocation extends Model
     protected function casts(): array
     {
         return [
-            'heat_index' => 'decimal:2',
-            'latitude' => 'decimal:7',
-            'longitude' => 'decimal:7',
+            'heat_index' => 'float',
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 }
