@@ -82,8 +82,10 @@ class HeatLocationController extends Controller
     /**
      * Extract the heat index from a Google current-conditions payload.
      *
-     * The "feels like" temperature is used as the heat index, falling back to
-     * the raw temperature when it is unavailable.
+     * Google's real payload nests these values (see docs/endpoint-responses.md):
+     * "feelsLikeTemperature" and "temperature" are objects with a "degrees"
+     * field. The "feels like" temperature is used as the heat index, falling
+     * back to the raw temperature when it is unavailable.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -95,11 +97,27 @@ class HeatLocationController extends Controller
             return null;
         }
 
-        $value = $conditions['temperatureFeelsLike']
-            ?? $conditions['temperature']
+        $value = $this->degrees($conditions['feelsLikeTemperature'] ?? null)
+            ?? $this->degrees($conditions['temperature'] ?? null)
             ?? null;
 
         return is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * Read the "degrees" value from a temperature object, or null.
+     *
+     * @param  mixed  $temperature  A temperature object like {"degrees": 13.7, "unit": "CELSIUS"}.
+     */
+    protected function degrees(mixed $temperature): ?float
+    {
+        if (! is_array($temperature)) {
+            return null;
+        }
+
+        $degrees = $temperature['degrees'] ?? null;
+
+        return is_numeric($degrees) ? (float) $degrees : null;
     }
 
     /**
