@@ -96,8 +96,8 @@ All routes are under the `/api` prefix. Public routes need no auth; protected ro
 All error responses use the same Laravel-conventional shape: `{"message": "..."}`. Entity-specific text (e.g. `Post not found.` vs `Action not found.`) carries the granularity formerly held by `details`; there is no per-endpoint exception such as the legacy `false` sentinel.
 
 ### Behavior details
-- **`analyze-heat-location`**: fetch current heat index for the point; **delete** existing rows within ~0.001° (~100 m) of the point, rows older than 1 hour, and rows with NULL heat_index; **insert** the new reading; return `{heatIndex, latitude, longitude, createdAt}`.
-- **`heat-locations` (GET)**: purge rows older than 1 hour or with NULL heat_index; return all remaining rows.
+- **`analyze-heat-location`**: fetch the current heat index for the point (extracted from the real Google current-conditions shape: `feelsLikeTemperature.degrees`, falling back to `temperature.degrees`); **delete** existing rows within ~0.001° (~100 m) of the point, rows older than 1 hour, and rows with NULL heat_index; **insert** the new reading; return `{heatIndex, latitude, longitude, createdAt}`. `heatIndex`, `latitude`, and `longitude` are serialized as JSON **numbers** (the models cast these to `float`).
+- **`heat-locations` (GET)**: purge rows older than 1 hour or with NULL heat_index; return all remaining rows. `heat_index`, `latitude`, and `longitude` are serialized as JSON **numbers**.
 - **`posts` (GET)**: purge posts older than 24 hours; return all remaining posts, each with an embedded `user` object (id, name, avatar).
 - **`posts/{id}` (GET)**: return the post with embedded `user`.
 - **`posts/{id}` (DELETE)**: 401 if unauthenticated or not the owner; 404 if the post doesn't exist; 200 on success.
