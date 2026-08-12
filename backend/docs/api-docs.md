@@ -93,8 +93,8 @@ Endpoints that accept a coordinate validate:
 | `user_id` | integer | FK → users.id |
 | `content` | string | Post body |
 | `address` | string \| null | Reverse-geocoded, only if the user opted in |
-| `latitude` | decimal (7 dp) \| null | |
-| `longitude` | decimal (7 dp) \| null | |
+| `latitude` | decimal (7 dp) \| null | Serialized as a JSON number |
+| `longitude` | decimal (7 dp) \| null | Serialized as a JSON number |
 | `created_at` | string (ISO 8601) | Used for 24h expiry |
 | `updated_at` | string (ISO 8601) | |
 | `user` | object | Embedded author: `{ id, name, avatar }` (only when loaded) |
@@ -106,9 +106,9 @@ Endpoints that accept a coordinate validate:
 | Field | Type | Notes |
 |---|---|---|
 | `id` | integer | |
-| `heat_index` | decimal (2 dp) \| null | Degrees Celsius |
-| `latitude` | decimal (7 dp) | |
-| `longitude` | decimal (7 dp) | |
+| `heat_index` | decimal (2 dp) \| null | Degrees Celsius; serialized as a JSON number |
+| `latitude` | decimal (7 dp) | Serialized as a JSON number |
+| `longitude` | decimal (7 dp) | Serialized as a JSON number |
 | `created_at` | string (ISO 8601) | Used for 1h expiry |
 | `updated_at` | string (ISO 8601) | |
 
@@ -120,7 +120,10 @@ Endpoints that accept a coordinate validate:
 
 ### 5.1 Weather — Current Conditions
 
-Returns the raw Google current-conditions payload for a coordinate.
+Returns the raw Google current-conditions payload for a coordinate. The payload
+is the **raw Google Weather API response** and may vary; the client should treat
+it as opaque and read the fields it needs defensively. The example below shows
+the real Google shape (see `docs/endpoint-responses.md`).
 
 ```
 POST /api/weather
@@ -137,33 +140,38 @@ POST /api/weather
 }
 ```
 
-**Success — `200`:** raw Google current-conditions JSON. Key fields used by the client include:
+**Success — `200`:** raw Google current-conditions JSON. Key fields the client
+may read (all within the raw payload):
 
 ```json
 {
-  "currentConditions": {
-    "temperature": 28.5,
-    "temperatureFeelsLike": 31.2,
-    "dewPoint": 22.1,
-    "humidity": 65,
-    "windSpeed": 12.3,
-    "windDirection": 180,
-    "windGust": 20.1,
-    "windChill": 28.0,
-    "wetBulbTemperature": 26.4,
-    "heatIndex": 33.0,
-    "cloudCover": 10,
-    "precipitationType": 0,
-    "icon": "SUNNY",
-    "iconUri": "https://...",
-    "condition": "Sunny",
-    "daylight": true,
-    "observationTime": "2026-08-12T12:00:00Z"
+  "currentTime": "2025-01-28T22:04:12.025273178Z",
+  "timeZone": { "id": "America/Los_Angeles" },
+  "isDaytime": true,
+  "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/sunny",
+    "description": { "text": "Sunny", "languageCode": "en" },
+    "type": "CLEAR"
+  },
+  "temperature": { "degrees": 28.5, "unit": "CELSIUS" },
+  "feelsLikeTemperature": { "degrees": 31.2, "unit": "CELSIUS" },
+  "dewPoint": { "degrees": 22.1, "unit": "CELSIUS" },
+  "relativeHumidity": 65,
+  "heatIndex": { "degrees": 33.0, "unit": "CELSIUS" },
+  "wind": {
+    "direction": { "degrees": 180, "cardinal": "SOUTH" },
+    "speed": { "value": 12.3, "unit": "KILOMETERS_PER_HOUR" },
+    "gust": { "value": 20.1, "unit": "KILOMETERS_PER_HOUR" }
+  },
+  "windChill": { "degrees": 28.0, "unit": "CELSIUS" },
+  "visibility": { "distance": 16, "unit": "KILOMETERS" },
+  "cloudCover": 10,
+  "precipitation": {
+    "probability": { "percent": 0, "type": "RAIN" },
+    "qpf": { "quantity": 0, "unit": "MILLIMETERS" }
   }
 }
 ```
-
-> **Note:** the exact payload is the raw Google Weather API response and may vary. The client should treat it as opaque and read the fields it needs defensively.
 
 **Errors:** `400` validation, `502` upstream.
 
@@ -171,7 +179,10 @@ POST /api/weather
 
 ### 5.2 Weather — 6-Hour Forecast
 
-Returns the raw Google hourly forecast payload for a coordinate.
+Returns the raw Google hourly forecast payload for a coordinate. The forecast is
+for **6 hours** and the payload is the **raw Google Weather API response** and
+may vary; the client should treat it as opaque. The example below shows the real
+Google shape (see `docs/endpoint-responses.md`).
 
 ```
 POST /api/forecast
@@ -188,28 +199,44 @@ POST /api/forecast
 }
 ```
 
-**Success — `200`:** raw Google forecast JSON. The forecast is for **6 hours** and includes an array of hourly entries. Key fields per hour include:
+**Success — `200`:** raw Google forecast JSON with a `forecastHours` array. The
+client renders the six series (temperature, feels-like, dew point, heat index,
+wind chill, wet-bulb) from the fields it needs:
 
 ```json
 {
-  "hourlyForecast": [
+  "forecastHours": [
     {
-      "temperature": 28.5,
-      "temperatureFeelsLike": 31.2,
-      "dewPoint": 22.1,
-      "windChill": 28.0,
-      "heatIndex": 33.0,
-      "wetBulbTemperature": 26.4,
-      "icon": "SUNNY",
-      "iconUri": "https://...",
-      "condition": "Sunny",
-      "forecastTime": "2026-08-12T13:00:00Z"
+      "interval": { "startTime": "2025-02-05T23:00:00Z", "endTime": "2025-02-06T00:00:00Z" },
+      "displayDateTime": { "year": 2025, "month": 2, "day": 5, "hours": 15, "utcOffset": "-28800s" },
+      "isDaytime": true,
+      "weatherCondition": {
+        "iconBaseUri": "https://maps.gstatic.com/weather/v1/sunny",
+        "description": { "text": "Sunny", "languageCode": "en" },
+        "type": "CLEAR"
+      },
+      "temperature": { "degrees": 28.5, "unit": "CELSIUS" },
+      "feelsLikeTemperature": { "degrees": 31.2, "unit": "CELSIUS" },
+      "dewPoint": { "degrees": 22.1, "unit": "CELSIUS" },
+      "windChill": { "degrees": 28.0, "unit": "CELSIUS" },
+      "heatIndex": { "degrees": 33.0, "unit": "CELSIUS" },
+      "wetBulbTemperature": { "degrees": 26.4, "unit": "CELSIUS" },
+      "relativeHumidity": 51,
+      "precipitation": {
+        "probability": { "percent": 0, "type": "RAIN" },
+        "qpf": { "quantity": 0, "unit": "MILLIMETERS" }
+      },
+      "wind": {
+        "direction": { "degrees": 335, "cardinal": "NORTH_NORTHWEST" },
+        "speed": { "value": 10, "unit": "KILOMETERS_PER_HOUR" },
+        "gust": { "value": 19, "unit": "KILOMETERS_PER_HOUR" }
+      },
+      "cloudCover": 0
     }
-  ]
+  ],
+  "timeZone": { "id": "America/Los_Angeles" }
 }
 ```
-
-> **Note:** the exact payload is the raw Google Weather API response and may vary. The client renders the six series (temperature, feels-like, dew point, heat index, wind chill, wet-bulb) from the fields it needs.
 
 **Errors:** `400` validation, `502` upstream.
 
@@ -261,7 +288,7 @@ POST /api/analyze-heat-location
 
 **Behavior:**
 1. Fetch the current conditions for the point.
-2. Extract the heat index (uses `temperatureFeelsLike`, falling back to `temperature`).
+2. Extract the heat index (uses `feelsLikeTemperature.degrees`, falling back to `temperature.degrees` — the real Google shape).
 3. Purge rows older than 1 hour or with a NULL heat index.
 4. Delete existing rows within ~0.001° (~100 m) of the point.
 5. Insert the new reading.
@@ -277,7 +304,7 @@ POST /api/analyze-heat-location
 }
 ```
 
-> `heatIndex` may be `null` when the heat index cannot be calculated (e.g. data license restrictions / local market protections). The client should handle this case (remove the marker and show an alert).
+> `heatIndex`, `latitude`, and `longitude` are serialized as JSON **numbers**. `heatIndex` may be `null` when the heat index cannot be calculated (e.g. data license restrictions / local market protections). The client should handle this case (remove the marker and show an alert).
 
 **Errors:** `400` validation, `502` upstream.
 
@@ -297,7 +324,7 @@ POST /api/heat-locations
 
 **Behavior:** rows older than 1 hour or with a NULL heat index are purged first.
 
-**Success — `200`:** array of `HeatLocation` objects:
+**Success — `200`:** array of `HeatLocation` objects (`heat_index`, `latitude`, `longitude` are JSON numbers):
 
 ```json
 [
@@ -305,7 +332,7 @@ POST /api/heat-locations
     "id": 1,
     "heat_index": 33.0,
     "latitude": 40.7128,
-    "longitude": -74.0060,
+    "longitude": -74.006,
     "created_at": "2026-08-12T12:00:00.000000Z",
     "updated_at": "2026-08-12T12:00:00.000000Z"
   }
@@ -338,7 +365,7 @@ GET /api/posts
     "content": "Stay hydrated out there!",
     "address": "New York, NY, USA",
     "latitude": 40.7128,
-    "longitude": -74.0060,
+    "longitude": -74.006,
     "created_at": "2026-08-12T11:30:00.000000Z",
     "updated_at": "2026-08-12T11:30:00.000000Z",
     "user": {
@@ -414,7 +441,7 @@ POST /api/posts
   "content": "What's on your mind?",
   "address": "New York, NY, USA",
   "latitude": 40.7128,
-  "longitude": -74.0060,
+  "longitude": -74.006,
   "created_at": "2026-08-12T12:00:00.000000Z",
   "updated_at": "2026-08-12T12:00:00.000000Z",
   "user": {
