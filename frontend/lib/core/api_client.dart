@@ -20,6 +20,9 @@ class ApiClient {
       BaseOptions(
         baseUrl: baseUrlAdapter.baseUrl,
         contentType: Headers.jsonContentType,
+        // Tell the server we expect JSON so unauthenticated requests return a
+        // clean 401 instead of a redirect to a (nonexistent) login route.
+        headers: {'Accept': 'application/json'},
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 30),
       ),
