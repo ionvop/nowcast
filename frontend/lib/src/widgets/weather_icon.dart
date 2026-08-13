@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../config/app_config.dart';
 
 /// Renders a weather icon from an `iconBaseUri`.
 ///
@@ -6,6 +9,10 @@ import 'package:flutter/material.dart';
 /// `https://maps.gstatic.com/weather/v1/sunny`). The full URL is built by
 /// appending `.svg` (light variant) or `_dark.svg` (dark variant), matching
 /// the legacy web app.
+///
+/// The icon is fetched through the backend proxy endpoint
+/// (`GET /api/weather/icon?iconBaseUri=...`) rather than directly from the
+/// Google CDN, so the web build avoids CORS errors.
 class WeatherIcon extends StatelessWidget {
   const WeatherIcon({
     super.key,
@@ -27,7 +34,11 @@ class WeatherIcon extends StatelessWidget {
     if (base.isEmpty) {
       return '';
     }
-    return dark ? '${base}_dark.svg' : '$base.svg';
+    final full = dark ? '${base}_dark.svg' : '$base.svg';
+    // Route the icon through the backend proxy to avoid CORS on web.
+    return Uri.parse('${AppConfig.baseUrl}/weather/icon')
+        .replace(queryParameters: <String, String>{'iconBaseUri': full})
+        .toString();
   }
 
   @override
@@ -40,11 +51,16 @@ class WeatherIcon extends StatelessWidget {
         child: Icon(Icons.wb_sunny_outlined, size: size * 0.6),
       );
     }
-    return Image.network(
+    return SvgPicture.network(
       url,
       width: size,
       height: size,
       fit: BoxFit.contain,
+      placeholderBuilder: (context) => SizedBox(
+        width: size,
+        height: size,
+        child: Icon(Icons.wb_sunny_outlined, size: size * 0.6),
+      ),
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
           width: size,
