@@ -267,7 +267,39 @@ POST /api/geocode
 
 ---
 
-### 5.4 Heat Locations — Analyze
+### 5.4 Weather — Icon Proxy
+
+Proxies a weather icon image from the Google static CDN. The client passes the
+absolute icon URL (the `iconBaseUri` from a weather/forecast payload, with the
+`.svg` / `_dark.svg` suffix appended) as a query parameter, and receives the raw
+image body with its original `Content-Type`. Only `maps.gstatic.com` hosts are
+accepted, so the endpoint cannot be abused as an open proxy.
+
+```
+GET /api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/sunny.svg
+```
+
+**Auth:** none
+
+**Query parameters:**
+
+| Parameter | Type | Notes |
+|---|---|---|
+| `iconBaseUri` | string (URL) | Required. Absolute icon URL; host must be `maps.gstatic.com`. |
+
+**Success — `200`:** the raw image body (e.g. `image/svg+xml`) with the matching
+`Content-Type` header.
+
+**Errors:**
+
+| Status | Meaning |
+|---|---|
+| `400` | Missing `iconBaseUri` or host not on the allow-list — `{"message": "..."}` |
+| `502` | Upstream Google CDN unreachable or errored — `{"message": "..."}` |
+
+---
+
+### 5.5 Heat Locations — Analyze
 
 Fetches the current heat index for a coordinate, replaces any nearby reading, and returns the stored reading.
 
@@ -310,7 +342,7 @@ POST /api/analyze-heat-location
 
 ---
 
-### 5.5 Heat Locations — List
+### 5.6 Heat Locations — List
 
 Returns all current heat-location readings.
 
@@ -343,7 +375,7 @@ POST /api/heat-locations
 
 ---
 
-### 5.6 Posts — List
+### 5.7 Posts — List
 
 Returns all current posts, newest first, each with its embedded author.
 
@@ -381,7 +413,7 @@ GET /api/posts
 
 ---
 
-### 5.7 Posts — Show
+### 5.8 Posts — Show
 
 Returns a single post with its embedded author.
 
@@ -404,7 +436,7 @@ GET /api/posts/{id}
 
 ---
 
-### 5.8 Posts — Create
+### 5.9 Posts — Create
 
 Creates a new post for the authenticated user.
 
@@ -458,7 +490,7 @@ POST /api/posts
 
 ---
 
-### 5.9 Posts — Delete
+### 5.10 Posts — Delete
 
 Deletes a post owned by the authenticated user.
 
@@ -486,7 +518,7 @@ DELETE /api/posts/{id}
 
 ---
 
-### 5.10 Profile
+### 5.11 Profile
 
 Returns the currently authenticated user's profile.
 
@@ -514,7 +546,7 @@ GET /api/profile
 
 ---
 
-### 5.11 Logout
+### 5.12 Logout
 
 Revokes the current Sanctum token and signs the user out.
 
