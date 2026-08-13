@@ -24,6 +24,12 @@ Future<void> main() async {
   final auth = AuthState(authStore: createAuthStoreAdapter());
   final app = AppState(api: api, auth: auth);
 
+  // When any request returns 401, clear the in-memory auth state so the UI
+  // reflects the signed-out state immediately.
+  api.onUnauthorized = () {
+    auth.clear();
+  };
+
   // PWA install support (web only).
   final pwaInstall = PwaInstallService()..init();
 
