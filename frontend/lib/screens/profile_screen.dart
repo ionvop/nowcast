@@ -126,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
       // Ignore logout network errors; still clear locally.
     }
-    if (!mounted) return;
+    // Always clear local auth state, even if the widget was disposed.
     await app.auth.clear();
   }
 
