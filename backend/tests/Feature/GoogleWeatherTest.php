@@ -114,3 +114,50 @@ test('service throws GoogleApiException on upstream error status', function (): 
     expect(fn () => app(GoogleWeatherService::class)->currentConditions(37.7749, -122.4194))
         ->toThrow(GoogleApiException::class);
 });
+
+test('weather icon proxied from the Google static CDN', function (): void {
+    Http::fake([
+        'maps.gstatic.com/*' => Http::response('<svg xmlns="http://www.w3.org/2000/svg"/>', 200, [
+            'Content-Type' => 'image/svg+xml',
+        ]),
+    ]);
+
+    $this->get('/api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/sunny.svg')
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertSee('<svg xmlns="http://www.w3.org/2000/svg"/>', false);
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://maps.gstatic.com/weather/v1/sunny.svg');
+});
+
+test('weather icon rejects hosts outside the allow-list', function (): void {
+    $this->get('/api/weather/icon?iconBaseUri=https://evil.example.com/icon.svg')
+        ->assertStatus(400)
+        ->assertJson(['message' => 'Invalid icon URL.']);
+});
+
+test('weather icon requires the iconBaseUri query parameter', function (): void {
+    $this->get('/api/weather/icon')
+        ->assertStatus(400)
+        ->assertJson(['message' => 'The iconBaseUri query parameter is required.']);
+});
+
+test('weather icon returns 502 when the upstream icon is missing', function (): void {
+    Http::fake([
+        'maps.gstatic.com/*' => Http::response('Not Found', 404),
+    ]);
+
+    $this->get('/api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/missing.svg')
+        ->assertStatus(502)
+        ->assertJson(['message' => 'Google service is currently unreachable. Please try again later.']);
+});
+
+test('weather icon returns 502 on upstream connection failure', function (): void {
+    Http::fake(function () {
+        throw new ConnectionException('Connection refused');
+    });
+
+    $this->get('/api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/sunny.svg')
+        ->assertStatus(502)
+        ->assertJson(['message' => 'Google service is currently unreachable. Please try again later.']);
+});
