@@ -1,11 +1,11 @@
 {
-    "name": "Nowcast",
-    "short_name": "Nowcast",
+    "name": "test",
+    "short_name": "test",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFFFF",
-    "theme_color": "#EEEEFF",
-    "description": "Nowcast - weather and extreme-heat monitoring with community posting.",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

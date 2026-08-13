@@ -18,19 +18,18 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Nowcast - weather and extreme-heat monitoring with community posting.">
-  <meta name="theme-color" content="#EEEEFF">
+  <meta name="description" content="A new Flutter project.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Nowcast">
+  <meta name="apple-mobile-web-app-title" content="test">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Nowcast</title>
+  <title>test</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -42,57 +41,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!--
-    Google Maps JS API. Replace YOUR_GOOGLE_MAPS_CLIENT_KEY with a build-time
-    client key (distinct from the server's GOOGLE_MAPS_KEY). Keep it in sync
-    with the --dart-define=GOOGLE_MAPS_CLIENT_KEY used to build the app.
-    When the key is configured, uncomment the script tag below.
-  -->
-  <script src="https://maps.googleapis.com/maps/api/js?key={{GOOGLE_MAPS_CLIENT_KEY}}"></script>
   <script src="flutter_bootstrap.js" async></script>
-
-  <script>
-    // PWA install prompt (web only). Captures the beforeinstallprompt event
-    // and shows an in-app install button on first visit when not installed.
-    (function () {
-      var deferredPrompt = null;
-      var shown = false;
-
-      function isStandalone() {
-        return window.matchMedia &&
-          (window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true);
-      }
-
-      window.addEventListener('beforeinstallprompt', function (e) {
-        // Prevent the default mini-infobar.
-        e.preventDefault();
-        deferredPrompt = e;
-        if (!shown && !isStandalone()) {
-          shown = true;
-          // Dispatch a custom event the Flutter app can listen to, or show a
-          // simple banner. We surface it on the window for the app.
-          window.dispatchEvent(new CustomEvent('nowcast-install-available', {
-            detail: true,
-          }));
-        }
-      });
-
-      window.addEventListener('appinstalled', function () {
-        deferredPrompt = null;
-        window.dispatchEvent(new CustomEvent('nowcast-installed', {}));
-      });
-
-      // Expose an install trigger for the Flutter app.
-      window.nowcastPromptInstall = function () {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then(function () {
-            deferredPrompt = null;
-          });
-        }
-      };
-    })();
-  </script>
 </body>
 </html>

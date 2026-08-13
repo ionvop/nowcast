@@ -1,5 +1,5 @@
-name: frontend
-description: "Nowcast - weather / extreme-heat monitoring and community posting app."
+name: nowcast
+description: "Nowcast: a weather and heat-health monitoring app."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -34,27 +34,6 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-
-  # HTTP client with CancellableToken and interceptors
-  dio: ^5.7.0
-  # State management
-  provider: ^6.1.2
-  # Google Maps
-  google_maps_flutter: ^2.10.0
-  # Charts
-  fl_chart: ^0.69.0
-  # Geolocation
-  geolocator: ^13.0.2
-  # Auth token storage (native secure storage, web shared_preferences)
-  flutter_secure_storage: 8.1.0
-  shared_preferences: ^2.3.3
-  # Native notifications (native only)
-  flutter_local_notifications: ^17.2.3
-  # Date formatting
-  intl: ^0.19.0
-  flutter_svg: ^2.3.0
-  url_launcher: ^6.3.2
-  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
