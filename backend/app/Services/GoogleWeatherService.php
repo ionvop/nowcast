@@ -26,6 +26,11 @@ class GoogleWeatherService
     protected const GEOCODE_BASE = 'https://geocode.googleapis.com/v4/geocode';
 
     /**
+     * The only host the icon proxy is allowed to fetch from.
+     */
+    protected const ICON_HOST = 'maps.gstatic.com';
+
+    /**
      * Fetch the current weather conditions for a coordinate.
      *
      * @return array<string, mixed> The raw Google current-conditions payload.
@@ -66,6 +71,48 @@ class GoogleWeatherService
             self::GEOCODE_BASE.'/location',
             ['location' => ['latitude' => $latitude, 'longitude' => $longitude]],
         );
+    }
+
+    /**
+     * Fetch a weather icon image from the Google static CDN.
+     *
+     * Only hosts on the allow-list (maps.gstatic.com) are accepted so the
+     * endpoint cannot be abused as an open proxy (SSRF).
+     *
+     * @param  string  $iconBaseUri  The absolute icon URL, e.g.
+     *                               https://maps.gstatic.com/weather/v1/sunny.svg
+     * @return array{body: string, contentType: string} The raw image body and its MIME type.
+     *
+     * @throws GoogleApiException When the URL is not allowed, Google is
+     *                            unreachable, or the upstream returns an error.
+     */
+    public function icon(string $iconBaseUri): array
+    {
+        $host = strtolower((string) parse_url($iconBaseUri, PHP_URL_HOST));
+
+        if ($host !== self::ICON_HOST) {
+            throw new GoogleApiException('Invalid icon URL.', 400);
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->retry(2, 100)
+                ->get($iconBaseUri);
+        } catch (ConnectionException|RequestException) {
+            throw new GoogleApiException('Google service is currently unreachable. Please try again later.');
+        }
+
+        if (! $response->successful()) {
+            throw new GoogleApiException(
+                'Google returned an error. Please try again later.',
+                $response->status(),
+            );
+        }
+
+        return [
+            'body' => $response->body(),
+            'contentType' => $response->header('Content-Type') ?: 'image/svg+xml',
+        ];
     }
 
     /**
