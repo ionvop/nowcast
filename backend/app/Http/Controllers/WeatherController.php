@@ -6,6 +6,8 @@ use App\Exceptions\GoogleApiException;
 use App\Http\Requests\CoordinateRequest;
 use App\Services\GoogleWeatherService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class WeatherController extends Controller
 {
@@ -44,6 +46,36 @@ class WeatherController extends Controller
             (float) $request->latitude,
             (float) $request->longitude,
         ));
+    }
+
+    /**
+     * Proxy a weather icon image from the Google static CDN.
+     *
+     * The client passes the absolute icon URL (e.g. the `iconBaseUri` from the
+     * weather payload) as the `iconBaseUri` query parameter. The image body is
+     * returned with its original Content-Type so the client can render it
+     * directly.
+     */
+    public function icon(Request $request): Response
+    {
+        $iconBaseUri = $request->query('iconBaseUri');
+
+        if (! is_string($iconBaseUri) || $iconBaseUri === '') {
+            return response()->json(['message' => 'The iconBaseUri query parameter is required.'], 400);
+        }
+
+        try {
+            $icon = $this->weather->icon($iconBaseUri);
+        } catch (GoogleApiException $e) {
+            return response()->json(
+                ['message' => $e->getMessage()],
+                $e->statusCode,
+            );
+        }
+
+        return response($icon['body'], 200, [
+            'Content-Type' => $icon['contentType'],
+        ]);
     }
 
     /**
