@@ -59,7 +59,13 @@ class WeatherIcon extends StatelessWidget {
       placeholderBuilder: (context) => SizedBox(
         width: size,
         height: size,
-        child: Icon(Icons.wb_sunny_outlined, size: size * 0.6),
+        child: Center(
+          child: SizedBox(
+            width: size * 0.5,
+            height: size * 0.5,
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       ),
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
