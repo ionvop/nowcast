@@ -7,6 +7,11 @@ class ForecastHour {
     required this.hour24,
     required this.condition,
     required this.temperatureC,
+    this.feelsLikeC,
+    this.dewPointC,
+    this.heatIndexC,
+    this.windChillC,
+    this.wetBulbC,
   });
 
   /// Hour of day in 24-hour format (0-23), from `displayDateTime.hours`.
@@ -16,6 +21,21 @@ class ForecastHour {
 
   /// Forecast temperature in degrees Celsius.
   final double? temperatureC;
+
+  /// Feels-like temperature in degrees Celsius.
+  final double? feelsLikeC;
+
+  /// Dew point in degrees Celsius.
+  final double? dewPointC;
+
+  /// Heat index in degrees Celsius.
+  final double? heatIndexC;
+
+  /// Wind chill in degrees Celsius.
+  final double? windChillC;
+
+  /// Wet-bulb temperature in degrees Celsius.
+  final double? wetBulbC;
 
   factory ForecastHour.fromJson(Map<String, dynamic> json) {
     final display = json['displayDateTime'];
@@ -28,6 +48,11 @@ class ForecastHour {
           ? WeatherCondition.fromJson(condition)
           : const WeatherCondition(iconBaseUri: '', description: ''),
       temperatureC: _degrees(json['temperature']),
+      feelsLikeC: _degrees(json['feelsLikeTemperature']),
+      dewPointC: _degrees(json['dewPoint']),
+      heatIndexC: _degrees(json['heatIndex']),
+      windChillC: _degrees(json['windChill']),
+      wetBulbC: _degrees(json['wetBulbTemperature']),
     );
   }
 
