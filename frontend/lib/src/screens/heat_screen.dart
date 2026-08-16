@@ -231,6 +231,7 @@ class _HeatChart extends StatelessWidget {
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (spot) => const Color(0xCC212121),
           getTooltipItems: _tooltipItems,
+          fitInsideVertically: true,
         ),
         getTouchedSpotIndicator: (barData, spotIndexes) {
           return spotIndexes.map((index) {
