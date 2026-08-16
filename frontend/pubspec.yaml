@@ -50,6 +50,15 @@ dependencies:
   # Interactive map for the Heat Map page.
   google_maps_flutter: ^2.10.0
 
+  # Local token persistence for the OAuth flow.
+  shared_preferences: ^2.3.3
+
+  # Opens the external browser for the Google consent screen.
+  url_launcher: ^6.3.1
+
+  # Intercepts the OAuth callback deep link (native schemes / universal links).
+  app_links: ^7.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
