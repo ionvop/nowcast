@@ -47,6 +47,9 @@ dependencies:
   # Line chart for the Heat Data page.
   fl_chart: ^1.1.0
 
+  # Interactive map for the Heat Map page.
+  google_maps_flutter: ^2.10.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
