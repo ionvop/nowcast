@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/placeholder_view.dart';
-import 'login_screen.dart';
 
 /// Profile tab: shows the signed-in user's avatar and name with a logout
 /// option, or a sign-in prompt when logged out. Currently a non-functional
@@ -33,13 +32,10 @@ class _SignInButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FilledButton.icon(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const LoginScreen(),
-          ),
-        );
-      },
+      // TODO: Implement backend Google OAuth redirect.
+      // Once implemented, this should navigate to the backend's Google login
+      // redirect endpoint to initiate the OAuth flow.
+      onPressed: null,
       icon: const Icon(Icons.login),
       label: const Text('Sign in with Google'),
       style: FilledButton.styleFrom(
