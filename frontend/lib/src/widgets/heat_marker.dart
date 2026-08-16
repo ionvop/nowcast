@@ -52,28 +52,18 @@ Future<BitmapDescriptor> buildLoadingMarker() async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
 
-  // Faint full ring.
-  canvas.drawCircle(
-    center,
-    radius,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..color = Colors.black.withValues(alpha: 0.15),
-  );
-
-  // Spinner arc.
-  canvas.drawArc(
-    Rect.fromCircle(center: center, radius: radius),
-    0,
-    4.5,
-    false,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFF00AAFF),
-  );
+  // Concentric "pulse" rings: nested circles suggest a radar ping, reading as
+  // "actively scanning this spot" even though the marker bitmap is static.
+  for (final r in <double>[20.0, 13.0, 6.0]) {
+    canvas.drawCircle(
+      center,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..color = const Color(0xFF00AAFF).withValues(alpha: 0.6),
+    );
+  }
 
   final picture = recorder.endRecording();
   final image = await picture.toImage(size.toInt(), size.toInt());
