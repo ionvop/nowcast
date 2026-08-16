@@ -44,6 +44,9 @@ dependencies:
   # SVG rendering for weather icons.
   flutter_svg: ^2.2.1
 
+  # Line chart for the Heat Data page.
+  fl_chart: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
