@@ -33,6 +33,7 @@ class _MapScreenState extends State<MapScreen> {
 
   GoogleMapController? _mapController;
   bool _analyzing = false;
+  bool _dialogVisible = false;
 
   @override
   void initState() {
@@ -128,7 +129,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _analyzeSpot(LatLng location) async {
-    if (_analyzing) return;
+    if (_analyzing || _dialogVisible) return;
     _analyzing = true;
 
     final controller = _mapController;
@@ -214,6 +215,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showAlert(String title, String message) {
     if (!mounted) return;
+    setState(() => _dialogVisible = true);
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -226,7 +228,9 @@ class _MapScreenState extends State<MapScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      if (mounted) setState(() => _dialogVisible = false);
+    });
   }
 
   void _fail(String message) {
@@ -277,13 +281,16 @@ class _MapScreenState extends State<MapScreen> {
         message: 'Unable to determine your location.',
       );
     }
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(target: center, zoom: 13),
-      markers: _markers,
-      myLocationEnabled: true,
-      myLocationButtonEnabled: true,
-      onMapCreated: (controller) => _mapController = controller,
-      onTap: _analyzeSpot,
+    return IgnorePointer(
+      ignoring: _dialogVisible,
+      child: GoogleMap(
+        initialCameraPosition: CameraPosition(target: center, zoom: 13),
+        markers: _markers,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: true,
+        onMapCreated: (controller) => _mapController = controller,
+        onTap: _analyzeSpot,
+      ),
     );
   }
 }
