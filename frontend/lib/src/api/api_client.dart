@@ -38,20 +38,38 @@ class ApiClient {
   final http.Client _client;
   final String _baseUrl;
 
+  /// GETs `[baseUrl]/[path]` and returns the decoded JSON.
+  ///
+  /// When [token] is non-null it is attached as a `Bearer` authorization
+  /// header. Throws [NetworkException] on transport errors and [ApiException]
+  /// on non-2xx responses (a 401 surfaces as [ApiException] with
+  /// [ApiException.statusCode] == 401).
+  Future<dynamic> get(String path, {String? token}) async {
+    final uri = Uri.parse('$_baseUrl/$path');
+    final http.Response response;
+    try {
+      response = await _client.get(uri, headers: _headers(token: token));
+    } on Exception {
+      throw const NetworkException(
+        'Could not reach the server. Check your connection and try again.',
+      );
+    }
+    return _decode(response);
+  }
+
   /// POSTs [body] to `[baseUrl]/[path]` and returns the decoded JSON.
   ///
-  /// Throws [NetworkException] on transport errors and [ApiException] on
-  /// non-2xx responses.
-  Future<dynamic> post(String path, Map<String, dynamic> body) async {
+  /// When [token] is provided it is attached as a `Bearer` authorization
+  /// header. Throws [NetworkException] on transport errors and [ApiException]
+  /// on non-2xx responses.
+  Future<dynamic> post(String path, Map<String, dynamic> body,
+      {String? token}) async {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
       response = await _client.post(
         uri,
-        headers: const <String, String>{
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: _headers(token: token),
         body: jsonEncode(body),
       );
     } on Exception {
@@ -59,7 +77,20 @@ class ApiClient {
         'Could not reach the server. Check your connection and try again.',
       );
     }
+    return _decode(response);
+  }
 
+  /// Builds the request headers, attaching a `Bearer` token when present.
+  Map<String, String> _headers({String? token}) {
+    return <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  /// Decodes a successful response, throwing [ApiException] for non-2xx.
+  dynamic _decode(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
         response.statusCode,
