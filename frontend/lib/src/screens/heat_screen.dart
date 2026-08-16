@@ -1,9 +1,10 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
+import '../utils/geolocation.dart';
+import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 
 /// Heat Data tab: a multi-series line chart of temperature, feels-like, dew
@@ -43,7 +44,7 @@ class _HeatScreenState extends State<HeatScreen> {
 
     try {
       // 1/2 — device location.
-      final position = await _getPosition();
+      final position = await getPosition(subject: 'heat data');
       if (!mounted) return;
 
       setState(() => _progressLabel = 'Loading data... (2/2)');
@@ -71,35 +72,6 @@ class _HeatScreenState extends State<HeatScreen> {
     } on Exception {
       _fail('Something went wrong while loading the heat data.');
     }
-  }
-
-  Future<Position> _getPosition() async {
-    var serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw const NetworkException(
-        'Location services are disabled. Please enable them to see your '
-        'local heat data.',
-      );
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied) {
-      throw const NetworkException(
-        'Location permission was denied. Grant location access to see your '
-        'local heat data.',
-      );
-    }
-    if (permission == LocationPermission.deniedForever) {
-      throw const NetworkException(
-        'Location permission is permanently denied. Enable it in your '
-        'device settings to see your local heat data.',
-      );
-    }
-
-    return Geolocator.getCurrentPosition();
   }
 
   void _fail(String message) {
@@ -132,11 +104,11 @@ class _HeatScreenState extends State<HeatScreen> {
       return LoadingOverlay(label: _progressLabel);
     }
     if (_error != null) {
-      return _ErrorView(message: _error!, onRetry: _load);
+      return ErrorView(message: _error!, onRetry: _load);
     }
     final forecast = _forecast;
     if (forecast == null || forecast.hours.isEmpty) {
-      return const _ErrorView(
+      return const ErrorView(
         message: 'No forecast data is available for your location right now.',
       );
     }
@@ -361,44 +333,6 @@ class _Legend extends StatelessWidget {
           ],
         );
       }).toList(),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, this.onRetry});
-
-  final String message;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade500),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF555555)),
-            ),
-            if (onRetry != null) ...<Widget>[
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }
