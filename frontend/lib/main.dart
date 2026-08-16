@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'src/auth/auth_controller.dart';
 import 'src/shell/app_shell.dart';
 import 'src/theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Restore any stored token before the first frame so the shell can show the
+  // correct signed-in / signed-out state immediately.
+  await authController.init();
   runApp(const NowcastApp());
 }
 
