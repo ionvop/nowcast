@@ -33,6 +33,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Client Google Maps API key, injected from
+             --dart-define=GOOGLE_MAPS_CLIENT_KEY (see app/build.gradle.kts). -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
