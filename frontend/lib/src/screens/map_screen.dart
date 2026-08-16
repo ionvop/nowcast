@@ -35,6 +35,11 @@ class _MapScreenState extends State<MapScreen> {
   bool _analyzing = false;
   bool _dialogVisible = false;
 
+  /// Taps delivered to the map shortly after a dialog is dismissed can be the
+  /// tail of the tap that closed the dialog. Ignore taps within this window.
+  static const Duration _dialogCooldown = Duration(milliseconds: 350);
+  DateTime? _lastDialogClosedAt;
+
   @override
   void initState() {
     super.initState();
@@ -129,7 +134,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _analyzeSpot(LatLng location) async {
-    if (_analyzing || _dialogVisible) return;
+    if (!_canAnalyzeSpot()) return;
     _analyzing = true;
 
     final controller = _mapController;
@@ -198,6 +203,16 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  bool _canAnalyzeSpot() {
+    if (_analyzing || _dialogVisible) return false;
+    final closedAt = _lastDialogClosedAt;
+    if (closedAt != null) {
+      final elapsed = DateTime.now().difference(closedAt);
+      if (elapsed < _dialogCooldown) return false;
+    }
+    return true;
+  }
+
   void _removeLoadingMarker(MarkerId id) {
     if (!mounted) return;
     setState(() {
@@ -229,7 +244,11 @@ class _MapScreenState extends State<MapScreen> {
         ],
       ),
     ).whenComplete(() {
-      if (mounted) setState(() => _dialogVisible = false);
+      if (!mounted) return;
+      setState(() {
+        _dialogVisible = false;
+        _lastDialogClosedAt = DateTime.now();
+      });
     });
   }
 
