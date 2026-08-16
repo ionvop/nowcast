@@ -47,7 +47,7 @@ Future<BitmapDescriptor> buildHeatMarker(Color color) async {
 Future<BitmapDescriptor> buildLoadingMarker() async {
   const size = 48.0;
   const center = Offset(size / 2, size / 2);
-  const radius = 20.0;
+  // const radius = 20.0;
 
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
