@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
 import '../theme/app_theme.dart';
 import '../utils/format.dart';
+import '../utils/geolocation.dart';
+import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/weather_icon.dart';
 
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       // 1/4 — device location.
-      final position = await _getPosition();
+      final position = await getPosition(subject: 'weather');
       if (!mounted) return;
 
       setState(() => _progressLabel = 'Loading current weather... (2/4)');
@@ -102,35 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<Position> _getPosition() async {
-    var serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw const NetworkException(
-        'Location services are disabled. Please enable them to see your '
-        'local weather.',
-      );
-    }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied) {
-      throw const NetworkException(
-        'Location permission was denied. Grant location access to see your '
-        'local weather.',
-      );
-    }
-    if (permission == LocationPermission.deniedForever) {
-      throw const NetworkException(
-        'Location permission is permanently denied. Enable it in your '
-        'device settings to see your local weather.',
-      );
-    }
-
-    return Geolocator.getCurrentPosition();
-  }
-
   String? _cityFromGeocode(dynamic json) {
     if (json is! Map<String, dynamic>) return null;
     final results = json['results'];
@@ -172,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return LoadingOverlay(label: _progressLabel);
     }
     if (_error != null) {
-      return _ErrorView(message: _error!, onRetry: _load);
+      return ErrorView(message: _error!, onRetry: _load);
     }
     return _HomeContent(
       weather: _weather,
@@ -331,42 +303,6 @@ class _ForecastCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.cloud_off, size: 64, color: Color(0xFF555555)),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF555555),
-                  ),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
-          ],
-        ),
       ),
     );
   }
