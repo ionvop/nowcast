@@ -80,6 +80,24 @@ class ApiClient {
     return _decode(response);
   }
 
+  /// DELETEs `[baseUrl]/[path]` and returns the decoded JSON.
+  ///
+  /// When [token] is provided it is attached as a `Bearer` authorization
+  /// header. Throws [NetworkException] on transport errors and [ApiException]
+  /// on non-2xx responses.
+  Future<dynamic> delete(String path, {String? token}) async {
+    final uri = Uri.parse('$_baseUrl/$path');
+    final http.Response response;
+    try {
+      response = await _client.delete(uri, headers: _headers(token: token));
+    } on Exception {
+      throw const NetworkException(
+        'Could not reach the server. Check your connection and try again.',
+      );
+    }
+    return _decode(response);
+  }
+
   /// Builds the request headers, attaching a `Bearer` token when present.
   Map<String, String> _headers({String? token}) {
     return <String, String>{
