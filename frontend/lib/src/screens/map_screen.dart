@@ -44,11 +44,15 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    // Consume a pending center on every focus event (e.g. when a community
+    // post's tagged location is tapped), not just when the map is created.
+    mapFocus.addListener(_applyPendingCenter);
     _load();
   }
 
   @override
   void dispose() {
+    mapFocus.removeListener(_applyPendingCenter);
     _mapController?.dispose();
     super.dispose();
   }
