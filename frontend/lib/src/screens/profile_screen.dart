@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
@@ -10,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
+import '../widgets/user_avatar.dart';
 
 /// Profile tab: shows the signed-in user's avatar and name with a logout
 /// option, or a sign-in prompt when logged out.
@@ -188,7 +186,7 @@ class _ProfileCard extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  _Avatar(user: user),
+                  UserAvatar(user: user, radius: 48),
                   const SizedBox(height: 16),
                   Text(
                     user.name,
@@ -218,48 +216,6 @@ class _ProfileCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Avatar image, decoding the base64 data URI returned by the API.
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.user});
-
-  final User user;
-
-  @override
-  Widget build(BuildContext context) {
-    final bytes = _decodeAvatar(user.avatar);
-    if (bytes == null) return _fallback();
-    return ClipOval(
-      child: Image.memory(
-        bytes,
-        width: 96,
-        height: 96,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stack) => _fallback(),
-      ),
-    );
-  }
-
-  Uint8List? _decodeAvatar(String? dataUri) {
-    if (dataUri == null || dataUri.isEmpty) return null;
-    const header = 'base64,';
-    final comma = dataUri.indexOf(header);
-    if (comma < 0) return null;
-    try {
-      return base64Decode(dataUri.substring(comma + header.length));
-    } on FormatException {
-      return null;
-    }
-  }
-
-  Widget _fallback() {
-    return CircleAvatar(
-      radius: 48,
-      backgroundColor: AppTheme.seed.withValues(alpha: 0.12),
-      child: const Icon(Icons.person, size: 56, color: AppTheme.seed),
     );
   }
 }
