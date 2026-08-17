@@ -5,6 +5,7 @@ import '../screens/heat_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/map_screen.dart';
 import '../screens/profile_screen.dart';
+import '../utils/map_focus.dart';
 
 /// The main application shell: a persistent bottom navigation bar with five
 /// destinations and an [IndexedStack] body so each screen keeps its state
@@ -29,6 +30,27 @@ class _AppShellState extends State<AppShell> {
     CommunityScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Allow the community screens to switch to the Map tab (e.g. when a
+    // post's tagged location is tapped).
+    mapFocus.addListener(_onMapFocus);
+  }
+
+  @override
+  void dispose() {
+    mapFocus.removeListener(_onMapFocus);
+    super.dispose();
+  }
+
+  void _onMapFocus() {
+    if (!mounted) return;
+    setState(() {
+      _selectedIndex = mapFocus.selectedTab;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
