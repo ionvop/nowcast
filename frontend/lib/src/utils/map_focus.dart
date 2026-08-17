@@ -18,9 +18,10 @@ class MapFocusController extends ChangeNotifier {
   int get selectedTab => _selectedTab;
 
   /// Requests the app to switch to the Map tab and center on [center].
-  void focusOn(LatLng center) {
+  void focusOn(LatLng center) async {
     _pendingCenter = center;
     _selectedTab = mapTabIndex;
+    await Future.delayed(const Duration(milliseconds: 100));
     notifyListeners();
   }
 
