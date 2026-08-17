@@ -169,6 +169,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final lng = post.longitude;
     if (lat == null || lng == null) return;
     mapFocus.focusOn(LatLng(lat, lng));
+    // Close this detail screen so the user lands on the Map tab.
+    Navigator.of(context).pop();
   }
 
   @override
