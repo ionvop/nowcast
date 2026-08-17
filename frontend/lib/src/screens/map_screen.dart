@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/heat_location.dart';
 import '../utils/geolocation.dart';
 import '../utils/heat_color.dart';
+import '../utils/map_focus.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
 import '../widgets/loading_overlay.dart';
@@ -50,6 +51,19 @@ class _MapScreenState extends State<MapScreen> {
   void dispose() {
     _mapController?.dispose();
     super.dispose();
+  }
+
+  /// Applies a pending center requested via [mapFocus] (e.g. from a community
+  /// post's tagged location) once the map is ready.
+  void _applyPendingCenter() {
+    final pending = mapFocus.takePendingCenter();
+    if (pending == null) return;
+    final controller = _mapController;
+    if (controller != null) {
+      controller.animateCamera(CameraUpdate.newLatLng(pending));
+    } else {
+      setState(() => _center = pending);
+    }
   }
 
   Future<void> _load() async {
@@ -307,7 +321,10 @@ class _MapScreenState extends State<MapScreen> {
         markers: _markers,
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
-        onMapCreated: (controller) => _mapController = controller,
+        onMapCreated: (controller) {
+          _mapController = controller;
+          _applyPendingCenter();
+        },
         onTap: _analyzeSpot,
       ),
     );
