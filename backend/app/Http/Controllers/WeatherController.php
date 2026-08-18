@@ -27,13 +27,17 @@ class WeatherController extends Controller
     }
 
     /**
-     * Return the 6-hour hourly forecast for a coordinate.
+     * Return the hourly forecast for a coordinate.
+     *
+     * An optional `hours` request field (1-360) controls the number of hours
+     * to forecast. When omitted, the Google API default of 6 hours is used.
      */
     public function forecast(CoordinateRequest $request): JsonResponse
     {
         return $this->proxy(fn () => $this->weather->hourlyForecast(
             (float) $request->latitude,
             (float) $request->longitude,
+            (int) $request->hours,
         ));
     }
 
