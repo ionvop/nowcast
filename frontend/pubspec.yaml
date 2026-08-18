@@ -59,6 +59,12 @@ dependencies:
   # Intercepts the OAuth callback deep link (native schemes / universal links).
   app_links: ^7.2.1
 
+  # Long-running background Dart isolate for the heat-alert service.
+  flutter_background_service: ^5.1.0
+
+  # Persistent local notifications for the heat-alert status.
+  flutter_local_notifications: ^22.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
