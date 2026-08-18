@@ -177,12 +177,12 @@ may read (all within the raw payload):
 
 ---
 
-### 5.2 Weather — 6-Hour Forecast
+### 5.2 Weather — Hourly Forecast
 
-Returns the raw Google hourly forecast payload for a coordinate. The forecast is
-for **6 hours** and the payload is the **raw Google Weather API response** and
-may vary; the client should treat it as opaque. The example below shows the real
-Google shape (see `docs/endpoint-responses.md`).
+Returns the raw Google hourly forecast payload for a coordinate. The payload is
+the **raw Google Weather API response** and may vary; the client should treat it
+as opaque. The example below shows the real Google shape (see
+`docs/endpoint-responses.md`).
 
 ```
 POST /api/forecast
@@ -195,9 +195,21 @@ POST /api/forecast
 ```json
 {
   "latitude": 40.7128,
-  "longitude": -74.0060
+  "longitude": -74.0060,
+  "hours": 6
 }
 ```
+
+**Parameters:**
+
+- `latitude` *(required, number, -90 to 90)*
+- `longitude` *(required, number, -180 to 180)*
+- `hours` *(optional, integer, 1 to 360)* — the number of hours to forecast.
+  When omitted, the Google API default of **6 hours** is used.
+
+**Success — `200`:** raw Google forecast JSON with a `forecastHours` array. The
+client renders the six series (temperature, feels-like, dew point, heat index,
+wind chill, wet-bulb) from the fields it needs:
 
 **Success — `200`:** raw Google forecast JSON with a `forecastHours` array. The
 client renders the six series (temperature, feels-like, dew point, heat index,
