@@ -29,6 +29,7 @@ class Weather {
     required this.condition,
     required this.temperatureC,
     required this.feelsLikeC,
+    this.heatIndexC,
   });
 
   final WeatherCondition condition;
@@ -39,6 +40,9 @@ class Weather {
   /// Feels-like temperature in degrees Celsius.
   final double? feelsLikeC;
 
+  /// Current heat index in degrees Celsius.
+  final double? heatIndexC;
+
   factory Weather.fromJson(Map<String, dynamic> json) {
     final condition = json['weatherCondition'];
     return Weather(
@@ -47,6 +51,7 @@ class Weather {
           : const WeatherCondition(iconBaseUri: '', description: ''),
       temperatureC: _degrees(json['temperature']),
       feelsLikeC: _degrees(json['feelsLikeTemperature']),
+      heatIndexC: _degrees(json['heatIndex']),
     );
   }
 
