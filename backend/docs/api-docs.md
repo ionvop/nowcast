@@ -205,7 +205,7 @@ POST /api/forecast
 - `latitude` *(required, number, -90 to 90)*
 - `longitude` *(required, number, -180 to 180)*
 - `hours` *(optional, integer, 1 to 360)* — the number of hours to forecast.
-  When omitted, the Google API default of **6 hours** is used.
+  When omitted, the server API default of **6 hours** is used.
 
 **Success — `200`:** raw Google forecast JSON with a `forecastHours` array. The
 client renders the six series (temperature, feels-like, dew point, heat index,
