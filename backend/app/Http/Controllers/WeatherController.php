@@ -37,7 +37,7 @@ class WeatherController extends Controller
         return $this->proxy(fn () => $this->weather->hourlyForecast(
             (float) $request->latitude,
             (float) $request->longitude,
-            (int) $request->hours,
+            $request->hours ?? 6,
         ));
     }
 
