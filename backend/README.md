@@ -61,8 +61,7 @@ Copy `.env.example` to `.env` and fill in the Google credentials:
 
 | Variable | Description |
 |---|---|
-| `GOOGLE_API_KEY` | Google Weather API key |
-| `GOOGLE_MAPS_KEY` | Google Maps / Geocoding API key |
+| `GOOGLE_API_KEY` | Google Weather / Geocoding API key |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI (web page URL or native custom scheme / universal link) |
