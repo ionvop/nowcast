@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar notification icon for the heat-alert service. Drawn in a
+     single white layer so it renders correctly as a small-icon (Android
+     tints it; solid colors only). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7a5,5 0 0,1 5,5v4l2,2v1H5v-1l2,-2v-4a5,5 0 0,1 5,-5z" />
+</vector>
