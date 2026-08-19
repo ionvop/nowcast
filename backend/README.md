@@ -1,58 +1,154 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Nowcast Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+The backend for **Nowcast** — a headless JSON API built with **Laravel 13** and **Laravel Sanctum**. It proxies Google Weather, Geocoding, and OAuth APIs, and persists users, posts, and crowd-sourced heat-index readings.
 
-## About Laravel
+This API is the contract for the Flutter client (Android, iOS, and web/PWA). The authoritative API reference lives in [`docs/api-docs.md`](docs/api-docs.md).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Weather** — current conditions, hourly forecast, and reverse geocoding proxied from Google.
+- **Weather icon proxy** — serves weather icons from the Google static CDN (host allow-listed).
+- **Heat locations** — analyze a coordinate (fetch + store the heat index) and list current crowd-sourced readings.
+- **Posts** — list, show, create, and delete time-limited posts (24h expiry) with embedded authors.
+- **Authentication** — server-side Google OAuth flow issuing Sanctum Bearer tokens; profile and logout endpoints.
+- **Rate limiting** — all routes wrapped in the `throttle:api` middleware.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Requirements
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP **^8.3**
+- [Composer](https://getcomposer.org/)
+- Node.js + npm (for the Vite build)
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Setup
 
 ```bash
-composer require laravel/boost --dev
+# 1. Install PHP dependencies
+composer install
 
-php artisan boost:install
+# 2. Configure the environment
+cp .env.example .env
+php artisan key:generate
+
+# 3. Run the database migrations
+php artisan migrate
+
+# 4. Install and build frontend assets (Vite)
+npm install
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+> A convenience `composer run setup` script performs steps 1–4 automatically.
 
-## Contributing
+### Local development
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+composer run dev
+```
 
-## Code of Conduct
+This starts the dev server, the queue worker, and Vite concurrently.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## Environment Variables
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Copy `.env.example` to `.env` and fill in the Google credentials:
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_API_KEY` | Google Weather API key |
+| `GOOGLE_MAPS_KEY` | Google Maps / Geocoding API key |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | OAuth redirect URI (web page URL or native custom scheme / universal link) |
+| `GOOGLE_NATIVE_SCHEME` | Native custom scheme for OAuth deep links (default: `nowcast`) |
+
+---
+
+## API Overview
+
+- **Base path:** all endpoints are prefixed with `/api`.
+- **Format:** JSON request/response bodies (`Content-Type: application/json`).
+- **Authentication:** optional for most endpoints; required for creating/deleting posts, viewing the profile, and logging out. Uses **Laravel Sanctum** Bearer tokens.
+- **Rate limiting:** all routes are wrapped in the `throttle:api` middleware.
+- **CORS:** `allowed_origins => ['*']`.
+
+### Base URL per platform
+
+| Platform | Base URL |
+|---|---|
+| Web / PWA | `/api` (reverse proxy serves the Flutter build and the API under `/api`) |
+| Android emulator | `http://10.0.2.2:8000/api` |
+| iOS simulator / real device / production | `https://yourdomain.com/api` |
+
+---
+
+## Endpoints
+
+| Method | URI | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/weather` | No | Current conditions for a coordinate |
+| POST | `/api/forecast` | No | Hourly forecast for a coordinate |
+| POST | `/api/geocode` | No | Reverse geocode a coordinate |
+| GET | `/api/weather/icon` | No | Proxy a weather icon image |
+| POST | `/api/analyze-heat-location` | No | Fetch + store the heat index for a coordinate |
+| POST | `/api/heat-locations` | No | List current heat-location readings |
+| GET | `/api/posts` | No | List posts (newest first) |
+| GET | `/api/posts/{id}` | No | Show a single post |
+| POST | `/api/posts` | Yes | Create a post |
+| DELETE | `/api/posts/{id}` | Yes | Delete a post (owner only) |
+| GET | `/api/profile` | Yes | Current user's profile |
+| POST | `/api/logout` | Yes | Revoke the current token |
+| GET | `/api/auth/google/redirect` | No | Redirect to the Google consent screen |
+| GET | `/api/auth/google/callback` | No | OAuth callback (issues a Sanctum token) |
+
+See [`docs/api-docs.md`](docs/api-docs.md) for full request/response shapes, validation rules, error codes, and the data models.
+
+---
+
+## Authentication
+
+Authentication is handled **server-side** via Google OAuth. The client never holds the Google credentials; it redirects the browser to the consent screen and later receives a Sanctum token.
+
+1. Redirect the browser to `GET /api/auth/google/redirect?returnTo=<target>`.
+2. Google redirects back to `GET /api/auth/google/callback?code=<code>&state=<returnTo>`.
+3. The server exchanges the code, fetches userinfo, upserts the user, and issues a Sanctum token.
+4. The browser is redirected to `<returnTo>#token=<sanctum-token>` (or `<returnTo>#error=1` on failure).
+
+Send the token on every authenticated request:
+
+```
+Authorization: Bearer <sanctum-token>
+```
+
+On a `401`, the client should clear the stored token and redirect the user to the Profile screen.
+
+---
+
+## Testing
+
+```bash
+composer run test
+# or
+php artisan test
+```
+
+The suite uses [Pest](https://pestphp.com/) and covers authentication, posts, heat locations, and the Google weather proxy.
+
+---
+
+## Documentation
+
+- [`docs/api-docs.md`](docs/api-docs.md) — authoritative API reference (endpoints, models, OAuth flow, client checklist).
+- [`docs/endpoint-responses.md`](docs/endpoint-responses.md) — real Google payload examples.
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
