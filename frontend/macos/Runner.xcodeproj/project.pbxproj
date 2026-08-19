@@ -395,10 +395,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.test.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ionvop.nowcast.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/test.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/test";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/nowcast.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/nowcast";
 			};
 			name = Debug;
 		};
@@ -409,10 +409,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.test.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ionvop.nowcast.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/test.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/test";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/nowcast.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/nowcast";
 			};
 			name = Release;
 		};
@@ -423,10 +423,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.test.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ionvop.nowcast.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/test.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/test";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/nowcast.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/nowcast";
 			};
 			name = Profile;
 		};
