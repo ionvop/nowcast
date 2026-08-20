@@ -6,6 +6,7 @@ import '../models/forecast_hour.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
+import 'settings_screen.dart';
 
 /// Heat Data tab: a multi-series line chart of temperature, feels-like, dew
 /// point, heat index, wind chill, and wet bulb over the 6-hour forecast.
@@ -82,10 +83,21 @@ class _HeatScreenState extends State<HeatScreen> {
     });
   }
 
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: _openSettings,
+        ),
         title: const Text('Heat Data'),
         actions: <Widget>[
           IconButton(
@@ -329,7 +341,9 @@ class _Legend extends StatelessWidget {
               s.label,
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF555555)),
+              ).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         );
