@@ -29,6 +29,7 @@ Route::middleware('throttle:api')->group(function (): void {
 
     Route::get('/posts', [PostController::class, 'index']);
     Route::get('/posts/{id}', [PostController::class, 'show']);
+    Route::get('/users/{id}/posts', [PostController::class, 'userPosts']);
 
     Route::get('/auth/google/redirect', [GoogleOAuthController::class, 'redirect']);
     Route::get('/auth/google/callback', [GoogleOAuthController::class, 'callback']);
