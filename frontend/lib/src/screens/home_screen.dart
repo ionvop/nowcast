@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
-import '../theme/app_theme.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_alert_section.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/weather_icon.dart';
+import 'settings_screen.dart';
 
 /// Home tab: current weather condition, icon, temperature, and an hourly
 /// forecast strip.
@@ -123,10 +123,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: _openSettings,
+        ),
         title: const Text('Nowcast'),
         actions: <Widget>[
           IconButton(
@@ -176,7 +187,7 @@ class _HomeContent extends StatelessWidget {
             Text(
               city!,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF555555),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
               textAlign: TextAlign.center,
@@ -225,7 +236,7 @@ class _CurrentWeatherCard extends StatelessWidget {
               temp != null ? '${temp.toStringAsFixed(1)}°C' : '--°C',
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.seed,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
             ),
             const SizedBox(height: 8),
@@ -234,7 +245,7 @@ class _CurrentWeatherCard extends StatelessWidget {
                   ? condition!.description
                   : 'Current conditions',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF555555),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -278,7 +289,7 @@ class _ForecastCard extends StatelessWidget {
     return Container(
       width: 96,
       decoration: BoxDecoration(
-        color: AppTheme.seed,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(12),
