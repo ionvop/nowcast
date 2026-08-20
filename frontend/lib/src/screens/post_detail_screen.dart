@@ -5,7 +5,6 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
 import '../models/user.dart';
-import '../theme/app_theme.dart';
 import '../utils/map_focus.dart';
 import '../utils/time_ago.dart';
 import '../widgets/error_view.dart';
@@ -225,7 +224,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             Text(
                               timeAgo(time),
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF555555),
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                         ],
@@ -247,17 +246,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: <Widget>[
-                          const Icon(
+                          Icon(
                             Icons.location_on_outlined,
                             size: 18,
-                            color: AppTheme.seed,
+                            color: theme.colorScheme.primary,
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               post.address!,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.seed,
+                                color: theme.colorScheme.primary,
                               ),
                             ),
                           ),
