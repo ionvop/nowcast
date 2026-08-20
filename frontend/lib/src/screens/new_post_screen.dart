@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
-import '../theme/app_theme.dart';
 import '../utils/geolocation.dart';
 import '../widgets/loading_overlay.dart';
 
@@ -156,7 +155,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
                   FilledButton(
                     onPressed: _submitting ? null : _submit,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.seed,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Post'),
