@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/user.dart';
-import '../theme/app_theme.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
 import '../widgets/user_avatar.dart';
+import 'settings_screen.dart';
 
 /// Profile tab: shows the signed-in user's avatar and name with a logout
 /// option, or a sign-in prompt when logged out.
@@ -23,7 +23,18 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: () {
+            Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+            );
+          },
+        ),
+        title: const Text('Profile'),
+      ),
       body: ListenableBuilder(
         listenable: authController,
         builder: (context, _) {
@@ -79,7 +90,9 @@ class _SignInButton extends StatelessWidget {
       onPressed: onPressed,
       icon: const Icon(Icons.login),
       label: const Text('Sign in with Google'),
-      style: FilledButton.styleFrom(backgroundColor: AppTheme.seed),
+      style: FilledButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
     );
   }
 }
@@ -197,7 +210,7 @@ class _ProfileCard extends StatelessWidget {
                   Text(
                     user.email,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF555555),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                     textAlign: TextAlign.center,
                   ),
