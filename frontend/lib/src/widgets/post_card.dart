@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../models/post.dart';
-import '../theme/app_theme.dart';
 import '../utils/map_focus.dart';
 import '../utils/time_ago.dart';
 import 'user_avatar.dart';
@@ -50,7 +49,7 @@ class PostCard extends StatelessWidget {
                           Text(
                             timeAgo(time),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: const Color(0xFF555555),
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                       ],
@@ -75,17 +74,17 @@ class PostCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Icon(
+                        Icon(
                           Icons.location_on_outlined,
                           size: 16,
-                          color: AppTheme.seed,
+                          color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             post.address!,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.seed,
+                              color: theme.colorScheme.primary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
