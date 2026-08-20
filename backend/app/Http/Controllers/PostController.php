@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePostRequest;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -59,6 +60,28 @@ class PostController extends Controller
         }
 
         return response()->json($post);
+    }
+
+    /**
+     * Return all current posts by a given user, newest first, each with its
+     * embedded author.
+     *
+     * Returns 404 if the user does not exist.
+     */
+    public function userPosts(int $id): JsonResponse
+    {
+        if (User::find($id) === null) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $this->purgeExpired();
+
+        return response()->json(
+            Post::with('user:id,name,avatar')
+                ->where('user_id', $id)
+                ->latest()
+                ->get(),
+        );
     }
 
     /**
