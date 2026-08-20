@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'src/auth/auth_controller.dart';
 import 'src/services/heat_alert_controller.dart';
 import 'src/services/heat_alert_service.dart';
+import 'src/services/settings_controller.dart';
 import 'src/shell/app_shell.dart';
 import 'src/theme/app_theme.dart';
 
@@ -15,6 +16,9 @@ Future<void> main() async {
   // toggle was left on.
   await configureHeatAlertService();
   await heatAlertController.init();
+  // Restore the stored theme preference before the first frame so the correct
+  // light/dark theme is applied immediately.
+  await settingsController.init();
   runApp(const NowcastApp());
 }
 
@@ -24,11 +28,18 @@ class NowcastApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Nowcast',
-      theme: AppTheme.light(),
-      debugShowCheckedModeBanner: false,
-      home: const AppShell(),
+    return ListenableBuilder(
+      listenable: settingsController,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'Nowcast',
+          theme: settingsController.isDarkMode
+              ? AppTheme.dark()
+              : AppTheme.light(),
+          debugShowCheckedModeBanner: false,
+          home: const AppShell(),
+        );
+      },
     );
   }
 }
