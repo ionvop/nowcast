@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../models/user.dart';
-import '../theme/app_theme.dart';
 
 /// Circular avatar for a [User], decoding the base64 data URI returned by the
 /// API and falling back to a themed placeholder when no avatar is available.
@@ -19,14 +18,14 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = _decodeAvatar(user.avatar);
-    if (bytes == null) return _fallback();
+    if (bytes == null) return _fallback(context);
     return ClipOval(
       child: Image.memory(
         bytes,
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stack) => _fallback(),
+        errorBuilder: (context, error, stack) => _fallback(context),
       ),
     );
   }
@@ -43,11 +42,12 @@ class UserAvatar extends StatelessWidget {
     }
   }
 
-  Widget _fallback() {
+  Widget _fallback(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppTheme.seed.withValues(alpha: 0.12),
-      child: Icon(Icons.person, size: radius, color: AppTheme.seed),
+      backgroundColor: primary.withValues(alpha: 0.12),
+      child: Icon(Icons.person, size: radius, color: primary),
     );
   }
 }
