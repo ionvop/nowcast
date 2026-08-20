@@ -579,6 +579,53 @@ POST /api/logout
 
 ---
 
+### 5.13 Posts — By User
+
+Returns all current posts by a specified user, newest first, each with its
+embedded author. Posts older than 24 hours are purged first.
+
+```
+GET /api/users/{id}/posts
+```
+
+**Auth:** none
+
+**Path parameters:**
+
+| Param | Type | Notes |
+|---|---|---|
+| `id` | integer | User ID |
+
+**Success — `200`:** array of `Post` objects with embedded `user` (same shape
+as one item in [§5.7](#57-posts--list)):
+
+```json
+[
+  {
+    "id": 10,
+    "user_id": 3,
+    "content": "Stay hydrated out there!",
+    "address": "New York, NY, USA",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "created_at": "2026-08-12T11:30:00.000000Z",
+    "updated_at": "2026-08-12T11:30:00.000000Z",
+    "user": {
+      "id": 3,
+      "name": "Jane Doe",
+      "avatar": "data:image/jpeg;base64,..."
+    }
+  }
+]
+```
+
+Returns an empty array (`[]`) when the user exists but has no current posts.
+
+**Errors:**
+- `404` — `{"message": "User not found."}`
+
+---
+
 ## 6. Google OAuth Flow
 
 Authentication is handled **server-side**. The client never holds the Google OAuth credentials; it only redirects the browser to the consent screen and later receives a Sanctum token.
@@ -669,6 +716,7 @@ The client should:
 | POST | `/api/heat-locations` | No | `{}` | `200` array of heat locations |
 | GET | `/api/posts` | No | — | `200` array of posts + user |
 | GET | `/api/posts/{id}` | No | — | `200` post + user |
+| GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | GET | `/api/profile` | Yes | — | `200` user / `401` |
