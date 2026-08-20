@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/heat_alert_controller.dart';
-import '../theme/app_theme.dart';
 
 /// The "Heat alert" card on the Home page: a heat-index danger-threshold
 /// slider and an on/off toggle that starts/stops the background notification
@@ -65,7 +64,10 @@ class _HeatAlertSectionState extends State<HeatAlertSection> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                const Icon(Icons.thermostat, color: AppTheme.seed),
+                Icon(
+                  Icons.thermostat,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -86,7 +88,9 @@ class _HeatAlertSectionState extends State<HeatAlertSection> {
               'Get notified when the heat index is dangerously high.',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF555555)),
+              ).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -102,7 +106,7 @@ class _HeatAlertSectionState extends State<HeatAlertSection> {
                     context,
                   ).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.seed,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
               ],
@@ -123,7 +127,9 @@ class _HeatAlertSectionState extends State<HeatAlertSection> {
                   : 'Turn this on to start monitoring your local heat index.',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF555555)),
+              ).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),
