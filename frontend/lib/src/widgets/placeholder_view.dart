@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
-
 /// A reusable placeholder body used by every screen in the app shell.
 ///
 /// Renders a centered icon, a screen title, and a short description inside a
@@ -40,7 +38,7 @@ class PlaceholderView extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Icon(icon, size: 64, color: AppTheme.seed),
+                  Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 16),
                   Text(
                     title,
@@ -51,7 +49,7 @@ class PlaceholderView extends StatelessWidget {
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF555555),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                     textAlign: TextAlign.center,
                   ),
