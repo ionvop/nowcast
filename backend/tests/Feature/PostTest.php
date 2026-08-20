@@ -94,6 +94,39 @@ test('show returns 404 for a missing post', function (): void {
         ->assertJson(['message' => 'Post not found.']);
 });
 
+test('userPosts returns a user\'s posts newest first with an embedded user', function (): void {
+    $user = User::factory()->create(['name' => 'Ada Lovelace', 'avatar' => 'data:image/png;base64,abc']);
+    $other = User::factory()->create(['name' => 'Grace Hopper']);
+
+    $older = $user->posts()->create(['content' => 'Older post']);
+    $older->forceFill(['created_at' => now()->subMinutes(30)])->save();
+
+    $newer = $user->posts()->create(['content' => 'Newer post']);
+    $other->posts()->create(['content' => 'Someone else\'s post']);
+
+    $this->getJson('/api/users/'.$user->id.'/posts')
+        ->assertOk()
+        ->assertJsonCount(2)
+        ->assertJsonPath('0.content', 'Newer post')
+        ->assertJsonPath('1.content', 'Older post')
+        ->assertJsonPath('0.user.name', 'Ada Lovelace')
+        ->assertJsonPath('0.user.avatar', 'data:image/png;base64,abc');
+});
+
+test('userPosts returns an empty array for a user with no posts', function (): void {
+    $user = User::factory()->create();
+
+    $this->getJson('/api/users/'.$user->id.'/posts')
+        ->assertOk()
+        ->assertJson([]);
+});
+
+test('userPosts returns 404 for a missing user', function (): void {
+    $this->getJson('/api/users/9999/posts')
+        ->assertStatus(404)
+        ->assertJson(['message' => 'User not found.']);
+});
+
 test('destroy deletes an owned post and returns 200', function (): void {
     $user = User::factory()->create();
     $post = $user->posts()->create(['content' => 'Delete me']);
