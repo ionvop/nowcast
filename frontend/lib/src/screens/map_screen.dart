@@ -9,6 +9,7 @@ import '../utils/map_focus.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
 import '../widgets/loading_overlay.dart';
+import 'settings_screen.dart';
 
 /// Map tab: an interactive map of crowd-sourced heat readings.
 ///
@@ -288,10 +289,21 @@ class _MapScreenState extends State<MapScreen> {
     return '$hour:$minute $period';
   }
 
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: _openSettings,
+        ),
         title: const Text('Heat Map'),
         actions: <Widget>[
           IconButton(
