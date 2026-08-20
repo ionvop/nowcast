@@ -9,6 +9,7 @@ import '../widgets/placeholder_view.dart';
 import '../widgets/post_card.dart';
 import 'new_post_screen.dart';
 import 'post_detail_screen.dart';
+import 'settings_screen.dart';
 
 /// Community tab: a feed of user posts shown newest-first, plus a floating
 /// "New Post" action shown only when signed in.
@@ -94,10 +95,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: _openSettings,
+        ),
         title: const Text('Community'),
         actions: <Widget>[
           IconButton(
