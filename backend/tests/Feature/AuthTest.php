@@ -139,3 +139,50 @@ test('oauth callback falls back to the web origin for an unknown return target',
 
     expect($response->headers->get('Location'))->toStartWith('http://localhost#token=');
 });
+
+test('oauth redirect carries the native return target in state while keeping the backend callback as redirect_uri', function (): void {
+    $response = $this->get('/api/auth/google/redirect?returnTo=nowcast://auth');
+    $response->assertRedirect();
+
+    $location = $response->headers->get('Location');
+    expect($location)->toContain('https://accounts.google.com/o/oauth2/v2/auth');
+    expect($location)->toContain('client_id=test-client-id');
+    // The redirect_uri sent to Google is still the backend callback, so the
+    // server can exchange the code and issue a Sanctum token.
+    expect($location)->toContain('redirect_uri='.urlencode('http://localhost/api/auth/google/callback'));
+    expect($location)->toContain('state='.urlencode('nowcast://auth'));
+});
+
+test('oauth callback returns the token to the native scheme after consent', function (): void {
+    Http::fake([
+        'oauth2.googleapis.com/*' => Http::response(['access_token' => 'google-access-token'], 200),
+        'www.googleapis.com/*' => Http::response([
+            'email' => 'ada@example.com',
+            'name' => 'Ada Lovelace',
+        ], 200),
+    ]);
+
+    $response = $this->get('/api/auth/google/callback?code=test-code&state='.urlencode('nowcast://auth'));
+    $response->assertRedirect();
+
+    $location = $response->headers->get('Location');
+    expect($location)->toStartWith('nowcast://auth#token=');
+
+    $token = substr($location, strlen('nowcast://auth#token='));
+    expect($token)->not->toBeEmpty();
+
+    // The issued token works against a protected endpoint.
+    $this->withToken($token)
+        ->getJson('/api/profile')
+        ->assertOk()
+        ->assertJson(['email' => 'ada@example.com']);
+});
+
+test('oauth callback redirects to the native scheme with an error fragment on upstream failure', function (): void {
+    Http::fake([
+        'oauth2.googleapis.com/*' => Http::response(['error' => 'invalid_grant'], 400),
+    ]);
+
+    $this->get('/api/auth/google/callback?code=bad-code&state='.urlencode('nowcast://auth'))
+        ->assertRedirect('nowcast://auth#error=1');
+});

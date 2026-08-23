@@ -161,11 +161,32 @@ class GoogleOAuthService
     /**
      * Resolve the Google OAuth redirect URI from configuration.
      *
+     * This is the URI sent to Google for both web and native clients. It
+     * must be a URL the browser can reach (a deployed backend or a tunnel),
+     * because the backend needs to receive the authorization code before it
+     * can issue a Sanctum token. The native custom scheme is only used as
+     * the return target after the code has been exchanged.
+     *
      * @throws GoogleApiException When no redirect URI is configured.
      */
     protected function redirectUri(): string
     {
         return $this->required('redirect', 'Google OAuth redirect URI is not configured.');
+    }
+
+    /**
+     * Resolve the native redirect URI from configuration.
+     *
+     * Reserved for documentation and future use. The backend callback URL
+     * (see redirectUri()) remains the redirect_uri sent to Google for both
+     * web and native clients, so the server can exchange the code and issue
+     * a Sanctum token before bouncing the browser to the native scheme.
+     */
+    protected function nativeRedirectUri(): ?string
+    {
+        $value = config('services.google.native_redirect');
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**
