@@ -22,7 +22,7 @@ const double kDefaultHeatAlertThreshold = 32.0;
 
 /// How often the background service re-checks the heat index and refreshes
 /// the persistent notification.
-const Duration kHeatAlertCheckInterval = Duration(minutes: 15);
+const Duration kHeatAlertCheckInterval = Duration(seconds: 15);
 
 /// Notification channel used by the heat-alert service.
 const String kHeatAlertChannelId = 'heat_alerts';
