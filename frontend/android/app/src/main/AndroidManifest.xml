@@ -9,8 +9,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="test"
+        android:label="Nowcast"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -52,7 +54,7 @@
             android:value="2" />
 
         <!-- Client Google Maps API key, injected from
-             --dart-define=GOOGLE_MAPS_CLIENT_KEY (see app/build.gradle.kts). -->
+             dart-define=GOOGLE_MAPS_CLIENT_KEY (see app/build.gradle.kts). -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${mapsApiKey}" />
