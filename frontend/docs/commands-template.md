@@ -1,11 +1,41 @@
 # Commands
 
-## Run
+## API_BASE_URL values
 
-```bash
-flutter run -d web-server --web-port 8080 --web-define=GOOGLE_MAPS_CLIENT_KEY=YOUR_API_KEY --dart-define=GOOGLE_MAPS_CLIENT_KEY=YOUR_API_KEY --dart-define=API_BASE_URL=http://localhost:8000/api
+### Local development
+
+```
+http://localhost:8000/api
 ```
 
+### Staging
+
+```
+https://stage.ionvop.com/nowcast/public/api
+```
+
+### Production
+
+```
+https://nowcast.ionvop.com/api
+```
+
+## Command templates
+
+### Test on browser with backend running locally
+
 ```bash
-flutter run --dart-define=GOOGLE_MAPS_CLIENT_KEY=YOUR_API_KEY --dart-define=API_BASE_URL=https://stage.ionvop.com/nowcast/public/api
+flutter run -d web-server --web-port 8080 --web-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
+```
+
+### Run on device
+
+```bash
+flutter run --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
+```
+
+### Build
+
+```bash
+flutter build apk --release --target-platform android-arm64 --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
 ```
