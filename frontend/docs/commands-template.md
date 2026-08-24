@@ -1,23 +1,31 @@
 # Commands
 
-## API_BASE_URL values
+## Environment values
 
-### Local development
+### API_BASE_URL
+
+**Local**
 
 ```
 http://localhost:8000/api
 ```
 
-### Staging
+**Staging**
 
 ```
 https://stage.ionvop.com/nowcast/public/api
 ```
 
-### Production
+**Production**
 
 ```
 https://nowcast.ionvop.com/api
+```
+
+### GOOGLE_MAPS_CLIENT_KEY
+
+```
+Paste your Google Maps API key here
 ```
 
 ## Command templates
