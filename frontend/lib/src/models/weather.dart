@@ -30,6 +30,10 @@ class Weather {
     required this.temperatureC,
     required this.feelsLikeC,
     this.heatIndexC,
+    this.uvIndex,
+    this.precipitationPercent,
+    this.relativeHumidity,
+    this.conditionType = '',
   });
 
   final WeatherCondition condition;
@@ -43,6 +47,18 @@ class Weather {
   /// Current heat index in degrees Celsius.
   final double? heatIndexC;
 
+  /// Current UV index (0–11+). Null when the API did not report it.
+  final int? uvIndex;
+
+  /// Probability of precipitation as a percentage (0–100). Null when absent.
+  final int? precipitationPercent;
+
+  /// Relative humidity as a percentage (0–100). Null when absent.
+  final int? relativeHumidity;
+
+  /// Machine-readable condition type, e.g. `CLEAR`, `RAIN`, `SNOW`.
+  final String conditionType;
+
   factory Weather.fromJson(Map<String, dynamic> json) {
     final condition = json['weatherCondition'];
     return Weather(
@@ -52,6 +68,10 @@ class Weather {
       temperatureC: _degrees(json['temperature']),
       feelsLikeC: _degrees(json['feelsLikeTemperature']),
       heatIndexC: _degrees(json['heatIndex']),
+      uvIndex: _int(json['uvIndex']),
+      precipitationPercent: _precipitationPercent(json['precipitation']),
+      relativeHumidity: _int(json['relativeHumidity']),
+      conditionType: _conditionType(condition),
     );
   }
 
@@ -61,5 +81,31 @@ class Weather {
       return (value['degrees'] as num).toDouble();
     }
     return null;
+  }
+
+  /// Reads a plain integer value, returning null when absent or non-numeric.
+  static int? _int(dynamic value) {
+    if (value is num) return value.toInt();
+    return null;
+  }
+
+  /// Extracts `precipitation.probability.percent` from the nested map.
+  static int? _precipitationPercent(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      final probability = value['probability'];
+      if (probability is Map<String, dynamic>) {
+        final percent = probability['percent'];
+        if (percent is num) return percent.toInt();
+      }
+    }
+    return null;
+  }
+
+  /// Reads the `type` field from the `weatherCondition` map.
+  static String _conditionType(dynamic condition) {
+    if (condition is Map<String, dynamic> && condition['type'] is String) {
+      return condition['type'] as String;
+    }
+    return '';
   }
 }
