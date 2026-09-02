@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../api/api_client.dart';
-import '../config/app_config.dart';
 
 /// Renders a weather icon from an `iconBaseUri`.
 ///
@@ -66,16 +65,16 @@ class _WeatherIconState extends State<WeatherIcon> {
   Uint8List? _bytes;
   bool _failed = false;
 
-  String get _url {
+  /// The full Google CDN icon URL (base + `.svg` / `_dark.svg`).
+  ///
+  /// This is the value sent as the `iconBaseUri` query parameter to the
+  /// backend proxy endpoint, and also serves as the cache key.
+  String get _iconUrl {
     final base = widget.iconBaseUri.trim();
     if (base.isEmpty) {
       return '';
     }
-    final full = widget.dark ? '${base}_dark.svg' : '$base.svg';
-    // Route the icon through the backend proxy to avoid CORS on web.
-    return Uri.parse('${AppConfig.baseUrl}/weather/icon')
-        .replace(queryParameters: <String, String>{'iconBaseUri': full})
-        .toString();
+    return widget.dark ? '${base}_dark.svg' : '$base.svg';
   }
 
   @override
@@ -97,8 +96,8 @@ class _WeatherIconState extends State<WeatherIcon> {
   }
 
   Future<void> _load() async {
-    final url = _url;
-    if (url.isEmpty) {
+    final iconUrl = _iconUrl;
+    if (iconUrl.isEmpty) {
       setState(() {
         _bytes = null;
         _failed = false;
@@ -106,7 +105,7 @@ class _WeatherIconState extends State<WeatherIcon> {
       return;
     }
 
-    final cached = _cache[url];
+    final cached = _cache[iconUrl];
     if (cached != null) {
       setState(() {
         _bytes = cached;
@@ -119,10 +118,10 @@ class _WeatherIconState extends State<WeatherIcon> {
     try {
       final bytes = await api.getBytes(
         'weather/icon',
-        query: <String, String>{'iconBaseUri': url},
+        query: <String, String>{'iconBaseUri': iconUrl},
       );
       if (!mounted) return;
-      _cache[url] = bytes;
+      _cache[iconUrl] = bytes;
       setState(() {
         _bytes = bytes;
         _failed = false;
