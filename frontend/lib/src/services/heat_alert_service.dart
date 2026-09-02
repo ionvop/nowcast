@@ -10,6 +10,7 @@ import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
 import '../utils/geolocation.dart';
+import '../widgets/health_reminder_section.dart';
 
 /// Shared_preferences key for whether heat alerts are enabled.
 const String kHeatAlertEnabledKey = 'heat_alert_enabled';
@@ -22,7 +23,18 @@ const double kDefaultHeatAlertThreshold = 32.0;
 
 /// How often the background service re-checks the heat index and refreshes
 /// the persistent notification.
-const Duration kHeatAlertCheckInterval = Duration(seconds: 15);
+const Duration kHeatAlertCheckInterval = Duration(minutes: 15);
+
+/// The faster check interval used when the app is launched with
+/// `--dart-define=TEST_INTERVAL=true`, so the persistent notifications refresh
+/// quickly for testing.
+const Duration kTestHeatAlertCheckInterval = Duration(seconds: 15);
+
+/// Whether the app was launched with `--dart-define=TEST_INTERVAL=true`.
+///
+/// When true the background service uses [kTestHeatAlertCheckInterval]
+/// instead of [kHeatAlertCheckInterval].
+const bool kUseTestInterval = bool.fromEnvironment('TEST_INTERVAL');
 
 /// Notification channel used by the heat-alert service.
 const String kHeatAlertChannelId = 'heat_alerts';
@@ -32,6 +44,15 @@ const String kHeatAlertChannelName = 'Heat Alerts';
 
 /// Notification id used by the persistent heat-alert status notification.
 const int kHeatAlertNotificationId = 9001;
+
+/// Notification channel used by the health-reminder service.
+const String kHealthReminderChannelId = 'health_reminders';
+
+/// Channel name surfaced in the system notification settings.
+const String kHealthReminderChannelName = 'Health reminders';
+
+/// Notification id used by the persistent health-reminder notification.
+const int kHealthReminderNotificationId = 9002;
 
 /// The current heat-alert status.
 enum HeatAlertStatus { safe, warning, danger }
@@ -75,6 +96,13 @@ Future<void> configureHeatAlertService() async {
     importance: Importance.low,
   );
 
+  const reminderChannel = AndroidNotificationChannel(
+    kHealthReminderChannelId,
+    kHealthReminderChannelName,
+    description: 'What to do in the current conditions.',
+    importance: Importance.low,
+  );
+
   final notifications = FlutterLocalNotificationsPlugin();
   await notifications.initialize(
     settings: const InitializationSettings(
@@ -82,10 +110,11 @@ Future<void> configureHeatAlertService() async {
       iOS: DarwinInitializationSettings(),
     ),
   );
-  await notifications
+  final android = notifications
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
+          AndroidFlutterLocalNotificationsPlugin>();
+  await android?.createNotificationChannel(channel);
+  await android?.createNotificationChannel(reminderChannel);
 
   await service.configure(
     androidConfiguration: AndroidConfiguration(
@@ -121,12 +150,14 @@ void heatAlertOnStart(ServiceInstance service) async {
 
   service.on('stopService').listen((_) async {
     await notifications.cancel(id: kHeatAlertNotificationId);
+    await notifications.cancel(id: kHealthReminderNotificationId);
     await service.stopSelf();
   });
 
-  // Run an immediate check, then every 15 minutes.
+  // Run an immediate check, then on the configured interval (15 minutes by
+  // default, 15 seconds when launched with TEST_INTERVAL=true).
   unawaited(_heatAlertTick(notifications));
-  Timer.periodic(kHeatAlertCheckInterval, (_) {
+  Timer.periodic(_checkInterval, (_) {
     unawaited(_heatAlertTick(notifications));
   });
 }
@@ -154,6 +185,7 @@ Future<bool> _heatAlertTick(
     final enabled = prefs.getBool(kHeatAlertEnabledKey) ?? false;
     if (!enabled) {
       await notifications.cancel(id: kHeatAlertNotificationId);
+      await notifications.cancel(id: kHealthReminderNotificationId);
       return false;
     }
 
@@ -197,6 +229,15 @@ Future<bool> _heatAlertTick(
       currentHeatIndexC: currentHeatIndexC,
       thresholdC: threshold,
     );
+
+    // Relay the health-reminder card: show a persistent notification only when
+    // a real reminder applies, otherwise clear it to avoid nagging.
+    final reminder = determineHealthReminder(Weather.fromJson(weatherJson));
+    if (reminder.isNeutral) {
+      await notifications.cancel(id: kHealthReminderNotificationId);
+    } else {
+      await _showReminder(notifications, reminder);
+    }
     return true;
   } catch (_) {
     // Best-effort: keep the service alive and retry on the next tick.
@@ -225,6 +266,36 @@ Future<dynamic> _resolvePosition() async {
   } catch (_) {
     return null;
   }
+}
+
+/// The check interval for the background service: the fast test interval when
+/// launched with `TEST_INTERVAL=true`, otherwise the production interval.
+Duration get _checkInterval =>
+    kUseTestInterval ? kTestHeatAlertCheckInterval : kHeatAlertCheckInterval;
+
+/// Displays (or updates) the persistent health-reminder notification.
+Future<void> _showReminder(
+  FlutterLocalNotificationsPlugin notifications,
+  HealthReminder reminder,
+) async {
+  await notifications.show(
+    id: kHealthReminderNotificationId,
+    title: reminder.title,
+    body: reminder.message,
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        kHealthReminderChannelId,
+        kHealthReminderChannelName,
+        icon: 'ic_notification',
+        importance: Importance.low,
+        priority: Priority.defaultPriority,
+        ongoing: true,
+        onlyAlertOnce: true,
+        showWhen: false,
+      ),
+      iOS: DarwinNotificationDetails(presentAlert: false, presentSound: false),
+    ),
+  );
 }
 
 /// Displays (or updates) the persistent heat-alert status notification.
