@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
+import '../services/settings_controller.dart';
+import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
@@ -233,7 +235,15 @@ class _HeatChart extends StatelessWidget {
               }
               return SideTitleWidget(
                 meta: meta,
-                child: Text('${hours[index].hour24}:00'),
+                child: ListenableBuilder(
+                  listenable: settingsController,
+                  builder: (context, _) => Text(
+                    formatHour(
+                      hours[index].hour24,
+                      use24Hour: settingsController.is24Hour,
+                    ),
+                  ),
+                ),
               );
             },
           ),
