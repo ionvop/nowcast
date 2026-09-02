@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/api_client.dart';
 import '../models/heat_location.dart';
+import '../services/settings_controller.dart';
+import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../utils/heat_color.dart';
 import '../utils/map_focus.dart';
@@ -282,11 +284,7 @@ class _MapScreenState extends State<MapScreen> {
   String _formatHeat(double value) => value.toStringAsFixed(1);
 
   String _formatTimestamp(DateTime time) {
-    final local = time.toLocal();
-    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final minute = local.minute.toString().padLeft(2, '0');
-    final period = local.hour < 12 ? 'AM' : 'PM';
-    return '$hour:$minute $period';
+    return formatTimestamp(time, use24Hour: settingsController.is24Hour);
   }
 
   void _openSettings() {
