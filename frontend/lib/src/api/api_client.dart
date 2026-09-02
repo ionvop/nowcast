@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -55,6 +56,36 @@ class ApiClient {
       );
     }
     return _decode(response);
+  }
+
+  /// GETs `[baseUrl]/[path]` and returns the raw response body bytes.
+  ///
+  /// Unlike [get], this does not attempt to decode the body as JSON — it is
+  /// intended for binary payloads such as weather icon SVGs. [query] is
+  /// appended as query parameters. When [token] is non-null it is attached as
+  /// a `Bearer` authorization header. Throws [NetworkException] on transport
+  /// errors and [ApiException] on non-2xx responses.
+  Future<Uint8List> getBytes(String path,
+      {Map<String, String>? query, String? token}) async {
+    var uri = Uri.parse('$_baseUrl/$path');
+    if (query != null && query.isNotEmpty) {
+      uri = uri.replace(queryParameters: query);
+    }
+    final http.Response response;
+    try {
+      response = await _client.get(uri, headers: _headers(token: token));
+    } on Exception {
+      throw const NetworkException(
+        'Could not reach the server. Check your connection and try again.',
+      );
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(
+        response.statusCode,
+        _messageFrom(response) ?? 'Request failed (${response.statusCode}).',
+      );
+    }
+    return response.bodyBytes;
   }
 
   /// POSTs [body] to `[baseUrl]/[path]` and returns the decoded JSON.
