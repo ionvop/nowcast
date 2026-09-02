@@ -17,14 +17,24 @@ class SettingsController extends ChangeNotifier {
   bool _darkMode = false;
   bool _is24Hour = false;
 
+  /// Whether the user has explicitly stored a 24-hour time-format preference.
+  ///
+  /// When `false`, the device's system time format is used as the default.
+  bool _hasStored24Hour = false;
+
+  /// Whether the device's time format has already been applied as the default.
+  bool _deviceDefaultApplied = false;
+
   /// Whether [init] has completed.
   bool get isInitialized => _initialized;
 
   /// Whether dark mode is enabled. Defaults to light mode (`false`).
   bool get isDarkMode => _darkMode;
 
-  /// Whether times are shown in 24-hour (military) format. Defaults to
-  /// 12-hour AM/PM format (`false`).
+  /// Whether times are shown in 24-hour (military) format.
+  ///
+  /// Defaults to the device's system time format when no explicit preference
+  /// has been stored, otherwise falls back to 12-hour AM/PM format (`false`).
   bool get is24Hour => _is24Hour;
 
   /// Restores the stored settings. Call once at app startup before the first
@@ -34,8 +44,21 @@ class SettingsController extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     _darkMode = prefs.getBool(kDarkModeKey) ?? false;
+    _hasStored24Hour = prefs.containsKey(k24HourKey);
     _is24Hour = prefs.getBool(k24HourKey) ?? false;
     _initialized = true;
+    notifyListeners();
+  }
+
+  /// Applies the device's system time format as the default when the user has
+  /// not stored an explicit preference.
+  ///
+  /// This is a no-op once a preference has been stored or the device default
+  /// has already been applied, so the user's explicit choice always wins.
+  void applyDeviceDefault(bool deviceUses24Hour) {
+    if (_hasStored24Hour || _deviceDefaultApplied) return;
+    _deviceDefaultApplied = true;
+    _is24Hour = deviceUses24Hour;
     notifyListeners();
   }
 
