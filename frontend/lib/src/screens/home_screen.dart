@@ -7,6 +7,7 @@ import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
+import '../widgets/health_reminder_section.dart';
 import '../widgets/heat_alert_section.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/weather_icon.dart';
@@ -196,6 +197,8 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           _CurrentWeatherCard(weather: weather),
+          const SizedBox(height: 16),
+          HealthReminderSection(weather: weather),
           const SizedBox(height: 16),
           const HeatAlertSection(),
           const SizedBox(height: 16),
