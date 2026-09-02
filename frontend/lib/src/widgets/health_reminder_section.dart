@@ -18,6 +18,10 @@ class HealthReminder {
 
   /// One-line explanation shown under the title.
   final String message;
+
+  /// Whether this is the neutral "enjoy the weather" reminder (i.e. no real
+  /// action is needed). Used to decide whether to surface a notification.
+  bool get isNeutral => title == 'Enjoy the weather';
 }
 
 /// Computes a health reminder from the current [weather].
