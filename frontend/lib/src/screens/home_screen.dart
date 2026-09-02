@@ -37,6 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _city;
   Forecast? _forecast;
 
+  /// Incremented on every load/refresh so failed weather icons are retried.
+  int _refreshCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _load() async {
+    _refreshCount++;
     setState(() {
       _loading = true;
       _error = null;
@@ -164,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
       weather: _weather,
       city: _city,
       forecast: _forecast,
+      retryToken: _refreshCount,
     );
   }
 }
@@ -173,11 +178,13 @@ class _HomeContent extends StatelessWidget {
     required this.weather,
     required this.city,
     required this.forecast,
+    required this.retryToken,
   });
 
   final Weather? weather;
   final String? city;
   final Forecast? forecast;
+  final int retryToken;
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +203,7 @@ class _HomeContent extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          _CurrentWeatherCard(weather: weather),
+          _CurrentWeatherCard(weather: weather, retryToken: retryToken),
           const SizedBox(height: 16),
           HealthReminderSection(weather: weather),
           const SizedBox(height: 16),
@@ -210,7 +217,7 @@ class _HomeContent extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            _ForecastStrip(hours: forecast!.hours),
+            _ForecastStrip(hours: forecast!.hours, retryToken: retryToken),
           ],
         ],
       ),
@@ -219,9 +226,10 @@ class _HomeContent extends StatelessWidget {
 }
 
 class _CurrentWeatherCard extends StatelessWidget {
-  const _CurrentWeatherCard({required this.weather});
+  const _CurrentWeatherCard({required this.weather, required this.retryToken});
 
   final Weather? weather;
+  final int retryToken;
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +242,11 @@ class _CurrentWeatherCard extends StatelessWidget {
         child: Column(
           children: <Widget>[
             if (condition != null && condition.iconBaseUri.isNotEmpty)
-              WeatherIcon(iconBaseUri: condition.iconBaseUri, size: 96),
+              WeatherIcon(
+                iconBaseUri: condition.iconBaseUri,
+                size: 96,
+                retryToken: retryToken,
+              ),
             const SizedBox(height: 12),
             Text(
               temp != null ? '${temp.toStringAsFixed(1)}°C' : '--°C',
@@ -261,9 +273,10 @@ class _CurrentWeatherCard extends StatelessWidget {
 }
 
 class _ForecastStrip extends StatelessWidget {
-  const _ForecastStrip({required this.hours});
+  const _ForecastStrip({required this.hours, required this.retryToken});
 
   final List<ForecastHour> hours;
+  final int retryToken;
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +288,7 @@ class _ForecastStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final hour = hours[index];
-          return _ForecastCard(hour: hour);
+          return _ForecastCard(hour: hour, retryToken: retryToken);
         },
       ),
     );
@@ -283,9 +296,10 @@ class _ForecastStrip extends StatelessWidget {
 }
 
 class _ForecastCard extends StatelessWidget {
-  const _ForecastCard({required this.hour});
+  const _ForecastCard({required this.hour, required this.retryToken});
 
   final ForecastHour hour;
+  final int retryToken;
 
   @override
   Widget build(BuildContext context) {
@@ -318,6 +332,7 @@ class _ForecastCard extends StatelessWidget {
               iconBaseUri: hour.condition.iconBaseUri,
               dark: true,
               size: 40,
+              retryToken: retryToken,
             ),
           Text(
             temp != null ? '${temp.toStringAsFixed(0)}°C' : '--°C',
