@@ -18,6 +18,7 @@ class SettingsScreen extends StatelessWidget {
         listenable: settingsController,
         builder: (context, _) {
           final darkMode = settingsController.isDarkMode;
+          final is24Hour = settingsController.is24Hour;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -56,6 +57,46 @@ class SettingsScreen extends StatelessWidget {
                         value: darkMode,
                         onChanged: (value) =>
                             settingsController.setDarkMode(value),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.access_time, color: AppTheme.seed),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              '24-hour time',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Display times in 24-hour (military) format.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: is24Hour,
+                        onChanged: (value) =>
+                            settingsController.set24Hour(value),
                       ),
                     ],
                   ),
