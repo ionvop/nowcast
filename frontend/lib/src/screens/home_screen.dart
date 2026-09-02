@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
+import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
@@ -296,11 +297,17 @@ class _ForecastCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(
-            convertHour(hour.hour24),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+          ListenableBuilder(
+            listenable: settingsController,
+            builder: (context, _) => Text(
+              formatHour(
+                hour.hour24,
+                use24Hour: settingsController.is24Hour,
+              ),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (hour.condition.iconBaseUri.isNotEmpty)
