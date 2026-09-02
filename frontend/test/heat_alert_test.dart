@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:nowcast/src/models/weather.dart';
 import 'package:nowcast/src/services/heat_alert_controller.dart';
 import 'package:nowcast/src/services/heat_alert_service.dart';
+import 'package:nowcast/src/widgets/health_reminder_section.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -130,6 +132,50 @@ void main() {
 
       await controller.setThreshold(controller.threshold);
       expect(notified, 0);
+    });
+  });
+
+  group('HealthReminder.isNeutral', () {
+    Weather makeWeather({
+      int? precipitationPercent,
+      int? uvIndex,
+      double? heatIndexC,
+      int? relativeHumidity,
+    }) {
+      return Weather(
+        condition: const WeatherCondition(iconBaseUri: '', description: ''),
+        temperatureC: 20,
+        feelsLikeC: 20,
+        heatIndexC: heatIndexC,
+        uvIndex: uvIndex,
+        precipitationPercent: precipitationPercent,
+        relativeHumidity: relativeHumidity,
+        conditionType: '',
+      );
+    }
+
+    test('neutral when conditions are pleasant', () {
+      final reminder = determineHealthReminder(makeWeather());
+      expect(reminder.isNeutral, isTrue);
+      expect(reminder.title, 'Enjoy the weather');
+    });
+
+    test('not neutral when a real reminder applies', () {
+      final reminder = determineHealthReminder(
+        makeWeather(precipitationPercent: 85),
+      );
+      expect(reminder.isNeutral, isFalse);
+      expect(reminder.title, 'Flood risk');
+    });
+  });
+
+  group('check interval selection', () {
+    test('production interval is 15 minutes', () {
+      expect(kHeatAlertCheckInterval, const Duration(minutes: 15));
+    });
+
+    test('test interval is 15 seconds', () {
+      expect(kTestHeatAlertCheckInterval, const Duration(seconds: 15));
     });
   });
 }
