@@ -37,6 +37,17 @@ class NowcastApp extends StatelessWidget {
               ? AppTheme.dark()
               : AppTheme.light(),
           debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            // When no explicit time-format preference is stored, default to the
+            // device's system time format. Applied after the frame so we don't
+            // mutate controller state during build.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              settingsController.applyDeviceDefault(
+                MediaQuery.alwaysUse24HourFormatOf(context),
+              );
+            });
+            return child ?? const SizedBox.shrink();
+          },
           home: const AppShell(),
         );
       },
