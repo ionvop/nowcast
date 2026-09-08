@@ -68,6 +68,7 @@ Map<String, dynamic> hourlyJson(int count) {
           'degrees': 18.0,
           'unit': 'CELSIUS',
         },
+        'uvIndex': 1 + i,
       };
     }),
   };
@@ -91,6 +92,7 @@ Map<String, dynamic> dailyJson(int count) {
               'languageCode': 'en',
             },
           },
+          'uvIndex': 3 + i,
           'precipitation': <String, dynamic>{
             'probability': <String, dynamic>{'percent': 5, 'type': 'RAIN'},
           },
@@ -166,6 +168,15 @@ void main() {
     // Hourly legend series.
     expect(find.text('Temperature'), findsOneWidget);
     expect(find.text('Feels Like'), findsOneWidget);
+    // UV chart (below the fold — scroll to it).
+    await tester.scrollUntilVisible(
+      find.text('Hourly UV Index'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Hourly UV Index'), findsOneWidget);
+    // The UV chart's Y-axis name.
+    expect(find.text('UV Index'), findsOneWidget);
   });
 
   testWidgets('toggling to daily shows the daily forecast', (tester) async {
@@ -179,6 +190,14 @@ void main() {
     // Daily legend series.
     expect(find.text('Max Temp'), findsOneWidget);
     expect(find.text('Min Temp'), findsOneWidget);
+    // UV chart (below the fold — scroll to it).
+    await tester.scrollUntilVisible(
+      find.text('Daily UV Index'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Daily UV Index'), findsOneWidget);
+    expect(find.text('Hourly UV Index'), findsNothing);
   });
 
   testWidgets('toggling back to hourly restores the hourly view', (
