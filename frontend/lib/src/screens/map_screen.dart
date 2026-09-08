@@ -44,6 +44,10 @@ class _MapScreenState extends State<MapScreen> {
   bool _analyzing = false;
   bool _dialogVisible = false;
 
+  /// Whether the heat-danger vibration loop is currently running. Guards
+  /// against starting the loop more than once.
+  bool _vibrating = false;
+
   /// The marker whose custom info card is currently shown, and its data.
   ///
   /// When non-null, the map is centered on this position and the card is shown
@@ -74,6 +78,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    _stopDangerVibration();
     mapFocus.removeListener(_applyPendingCenter);
     _mapController?.dispose();
     super.dispose();
@@ -391,11 +396,35 @@ class _MapScreenState extends State<MapScreen> {
       ),
     ).whenComplete(() {
       if (!mounted) return;
+      _stopDangerVibration();
       setState(() {
         _dialogVisible = false;
         _lastDialogClosedAt = DateTime.now();
       });
     });
+  }
+
+  /// Starts repeatedly pulsing the phone while the heat-danger dialog is open.
+  ///
+  /// The loop runs until [_stopDangerVibration] is called, the dialog is
+  /// dismissed, or the screen is unmounted. It is fire-and-forget so it does
+  /// not block the caller. No-op when vibration is disabled in settings or the
+  /// loop is already running.
+  void _startDangerVibration() {
+    if (_vibrating || !settingsController.isVibrationEnabled) return;
+    _vibrating = true;
+    () async {
+      while (_vibrating && mounted && _dialogVisible) {
+        await HapticFeedback.heavyImpact();
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }();
+  }
+
+  /// Stops the heat-danger vibration loop. The loop exits on its next
+  /// iteration after [_vibrating] is cleared.
+  void _stopDangerVibration() {
+    _vibrating = false;
   }
 
   /// Checks whether any nearby crowd-sourced reading is dangerously hot and, if
@@ -432,7 +461,7 @@ class _MapScreenState extends State<MapScreen> {
       danger.longitude,
     );
     if (settingsController.isVibrationEnabled) {
-      await HapticFeedback.vibrate();
+      _startDangerVibration();
     }
     _showAlert(
       'Heat danger',
