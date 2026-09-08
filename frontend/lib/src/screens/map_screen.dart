@@ -9,6 +9,7 @@ import '../models/weather_location.dart';
 import '../services/heat_danger_cooldown.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
+import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../utils/heat_color.dart';
 import '../utils/heat_danger.dart';
@@ -460,13 +461,29 @@ class _MapScreenState extends State<MapScreen> {
       danger.latitude,
       danger.longitude,
     );
+
+    // Worst-case address looks up; default to a message without it when the
+    // reverse-geocode request fails or returns nothing.
+    String address = '';
+    try {
+      final geocodeJson = await _api.post('geocode', <String, dynamic>{
+        'latitude': danger.latitude,
+        'longitude': danger.longitude,
+      });
+      final parsed = addressFromGeocode(geocodeJson);
+      if (parsed != null) address = ' at $parsed';
+    } on Exception {
+      // Leave address empty and show the message without it.
+    }
+
+    if (!mounted) return;
     if (settingsController.isVibrationEnabled) {
       _startDangerVibration();
     }
     _showAlert(
       'Heat danger',
       'A nearby weather reading has a heat index of '
-      '${heatIndex.toStringAsFixed(1)} °C, about '
+      '${heatIndex.toStringAsFixed(1)} °C$address, about '
       '${distance.toStringAsFixed(1)} km from your location. '
       'Take precautions to stay cool and hydrated.',
     );
