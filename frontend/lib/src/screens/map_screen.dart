@@ -415,7 +415,7 @@ class _MapScreenState extends State<MapScreen> {
     _vibrating = true;
     () async {
       while (_vibrating && mounted && _dialogVisible) {
-        await HapticFeedback.heavyImpact();
+        await HapticFeedback.vibrate();
         await Future.delayed(const Duration(milliseconds: 500));
       }
     }();
