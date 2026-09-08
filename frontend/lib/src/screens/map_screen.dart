@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/api_client.dart';
-import '../models/heat_location.dart';
+import '../models/weather_location.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
@@ -13,10 +13,10 @@ import '../widgets/heat_marker.dart';
 import '../widgets/loading_overlay.dart';
 import 'settings_screen.dart';
 
-/// Map tab: an interactive map of crowd-sourced heat readings.
+/// Map tab: an interactive map of crowd-sourced weather readings.
 ///
 /// Centers on the user's location, renders colored circular markers for the
-/// heat locations, and lets the user tap anywhere to analyze that spot's
+/// weather locations, and lets the user tap anywhere to analyze that spot's
 /// heat index (loading marker → colored marker → info window).
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -82,17 +82,17 @@ class _MapScreenState extends State<MapScreen> {
 
     try {
       // 1/2 — device location.
-      final position = await getPosition(subject: 'the heat map');
+      final position = await getPosition(subject: 'the weather map');
       if (!mounted) return;
 
       setState(() => _progressLabel = 'Loading map... (2/2)');
 
-      // 2/2 — existing heat locations.
-      final heatJson = await _api.post('heat-locations', <String, dynamic>{});
+      // 2/2 — existing weather locations.
+      final weatherJson = await _api.post('weather-locations', <String, dynamic>{});
       if (!mounted) return;
 
-      final heatLocations = _parseHeatLocations(heatJson);
-      final markers = await _buildMarkers(heatLocations);
+      final weatherLocations = _parseWeatherLocations(weatherJson);
+      final markers = await _buildMarkers(weatherLocations);
 
       setState(() {
         _center = LatLng(position.latitude, position.longitude);
@@ -106,22 +106,22 @@ class _MapScreenState extends State<MapScreen> {
     } on NetworkException catch (e) {
       _fail(e.message);
     } on Exception {
-      _fail('Something went wrong while loading the heat map.');
+      _fail('Something went wrong while loading the weather map.');
     }
   }
 
-  List<HeatLocation> _parseHeatLocations(dynamic json) {
-    if (json is! List) return const <HeatLocation>[];
+  List<WeatherLocation> _parseWeatherLocations(dynamic json) {
+    if (json is! List) return const <WeatherLocation>[];
     return json
         .whereType<Map<String, dynamic>>()
-        .map(HeatLocation.fromJson)
+        .map(WeatherLocation.fromJson)
         .toList();
   }
 
-  Future<Set<Marker>> _buildMarkers(List<HeatLocation> locations) async {
+  Future<Set<Marker>> _buildMarkers(List<WeatherLocation> locations) async {
     final markers = <Marker>{};
     for (final location in locations) {
-      final heatIndex = location.heatIndex;
+      final heatIndex = location.data?.heatIndexC;
       if (heatIndex == null) continue;
       final icon = await buildHeatMarker(getHeatIndexColor(heatIndex));
       markers.add(_markerFor(
@@ -174,13 +174,13 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final json = await _api.post('analyze-heat-location', <String, dynamic>{
+      final json = await _api.post('analyze-weather-location', <String, dynamic>{
         'latitude': location.latitude,
         'longitude': location.longitude,
       });
       if (!mounted) return;
 
-      final result = HeatLocation.fromJson(
+      final result = WeatherLocation.fromJson(
         json is Map<String, dynamic> ? json : <String, dynamic>{},
       );
 
@@ -188,7 +188,7 @@ class _MapScreenState extends State<MapScreen> {
         _markers.removeWhere((m) => m.markerId == loadingId);
       });
 
-      final heatIndex = result.heatIndex;
+      final heatIndex = result.data?.heatIndexC;
       if (heatIndex == null) {
         _showHeatUnavailableAlert();
         return;
