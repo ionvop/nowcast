@@ -5,10 +5,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../api/api_client.dart';
 import '../models/weather.dart';
 import '../models/weather_location.dart';
+import '../services/heat_danger_cooldown.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../utils/heat_color.dart';
+import '../utils/heat_danger.dart';
 import '../utils/map_focus.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
@@ -117,6 +119,15 @@ class _MapScreenState extends State<MapScreen> {
           ..addAll(markers);
         _loading = false;
       });
+
+      // After the map is ready, check whether any nearby crowd-sourced
+      // reading is dangerously hot and, if so, surface a one-time danger dialog
+      // (subject to a persisted cooldown).
+      await _maybeShowDangerAlert(
+        position.latitude,
+        position.longitude,
+        weatherLocations,
+      );
     } on ApiException catch (e) {
       _fail(e.message);
     } on NetworkException catch (e) {
@@ -384,6 +395,48 @@ class _MapScreenState extends State<MapScreen> {
         _lastDialogClosedAt = DateTime.now();
       });
     });
+  }
+
+  /// Checks whether any nearby crowd-sourced reading is dangerously hot and, if
+  /// so, shows a one-time danger dialog (subject to a persisted cooldown).
+
+  /// Called once after the map finishes loading on startup. No-op when the map
+  /// failed to load, when a dialog is already visible, when no nearby
+  /// reading exceeds the danger threshold, or when the cooldown is still
+  /// active.
+
+  Future<void> _maybeShowDangerAlert(
+    double userLat,
+    double userLon,
+    List<WeatherLocation> locations,
+  ) async {
+    if (!mounted || _dialogVisible) return;
+
+    final danger = findNearestDanger(
+      locations,
+      userLat: userLat,
+      userLon: userLon,
+    );
+    if (danger == null) return;
+
+    if (!await heatDangerCooldown.canShow()) return;
+    await heatDangerCooldown.recordShown();
+    if (!mounted) return;
+
+    final heatIndex = danger.data?.heatIndexC ?? 0;
+    final distance = haversineKm(
+      userLat,
+      userLon,
+      danger.latitude,
+      danger.longitude,
+    );
+    _showAlert(
+      'Heat danger',
+      'A nearby weather reading has a heat index of '
+      '${heatIndex.toStringAsFixed(1)} °C, about '
+      '${distance.toStringAsFixed(1)} km from your location. '
+      'Take precautions to stay cool and hydrated.',
+    );
   }
 
   void _fail(String message) {
