@@ -25,7 +25,7 @@ class WeatherLocationController extends Controller
      * the tolerance used for collapsing nearby crowd-sourced readings into a
      * single point.
      */
-    protected const DEDUP_DEGREES = 0.01;
+    protected const DEDUP_DEGREES = 0.001;
 
     public function __construct(private readonly GoogleWeatherService $weather)
     {
