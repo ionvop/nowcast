@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
+import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../widgets/loading_overlay.dart';
 
@@ -57,7 +58,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           'latitude': position.latitude,
           'longitude': position.longitude,
         });
-        final address = _addressFromGeocode(geocodeJson);
+        final address = addressFromGeocode(geocodeJson);
         if (address != null) {
           body['address'] = address;
         }
@@ -81,17 +82,6 @@ class _NewPostScreenState extends State<NewPostScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-
-  String? _addressFromGeocode(dynamic json) {
-    if (json is! Map<String, dynamic>) return null;
-    final results = json['results'];
-    if (results is! List || results.isEmpty) return null;
-    final first = results.first;
-    if (first is Map<String, dynamic> && first['formattedAddress'] is String) {
-      return first['formattedAddress'] as String;
-    }
-    return null;
   }
 
   void _showSnack(String message) {
