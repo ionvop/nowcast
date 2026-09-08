@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -430,6 +431,9 @@ class _MapScreenState extends State<MapScreen> {
       danger.latitude,
       danger.longitude,
     );
+    if (settingsController.isVibrationEnabled) {
+      await HapticFeedback.vibrate();
+    }
     _showAlert(
       'Heat danger',
       'A nearby weather reading has a heat index of '
