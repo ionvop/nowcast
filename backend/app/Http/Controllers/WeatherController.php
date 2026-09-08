@@ -42,6 +42,21 @@ class WeatherController extends Controller
     }
 
     /**
+     * Return the daily forecast for a coordinate.
+     *
+     * An optional `days` request field (1-14) controls the number of days to
+     * forecast. When omitted, the server default of 7 days is used.
+     */
+    public function dailyForecast(CoordinateRequest $request): JsonResponse
+    {
+        return $this->proxy(fn () => $this->weather->dailyForecast(
+            (float) $request->latitude,
+            (float) $request->longitude,
+            $request->days ?? 7,
+        ));
+    }
+
+    /**
      * Reverse-geocode a coordinate into a human-readable address.
      */
     public function geocode(CoordinateRequest $request): JsonResponse
