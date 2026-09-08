@@ -5,6 +5,7 @@ import '../models/forecast_hour.dart';
 import '../models/weather.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
+import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
 import '../widgets/health_reminder_section.dart';
@@ -79,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'longitude': position.longitude,
       });
       if (!mounted) return;
-      final city = _cityFromGeocode(geocodeJson);
+      final city = addressFromGeocode(geocodeJson);
 
       setState(() => _progressLabel = 'Loading forecast... (4/4)');
 
@@ -108,17 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } on Exception {
       _fail('Something went wrong while loading the weather.');
     }
-  }
-
-  String? _cityFromGeocode(dynamic json) {
-    if (json is! Map<String, dynamic>) return null;
-    final results = json['results'];
-    if (results is! List || results.isEmpty) return null;
-    final first = results.first;
-    if (first is Map<String, dynamic> && first['formattedAddress'] is String) {
-      return first['formattedAddress'] as String;
-    }
-    return null;
   }
 
   void _fail(String message) {
