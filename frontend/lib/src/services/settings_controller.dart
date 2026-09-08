@@ -7,7 +7,10 @@ const String kDarkModeKey = 'dark_mode';
 /// Shared-preferences key for the 24-hour time-format flag.
 const String k24HourKey = '24_hour';
 
-/// Manages app-wide user settings (dark mode, time format).
+/// Shared-preferences key for the heat-danger vibration flag.
+const String kVibrationKey = 'vibration';
+
+/// Manages app-wide user settings (dark mode, time format, vibration).
 ///
 /// Follows the same singleton [ChangeNotifier] pattern as [AuthController] and
 /// [HeatAlertController]: a single instance shared app-wide, with state
@@ -16,6 +19,7 @@ class SettingsController extends ChangeNotifier {
   bool _initialized = false;
   bool _darkMode = false;
   bool _is24Hour = false;
+  bool _vibration = true;
 
   /// Whether the user has explicitly stored a 24-hour time-format preference.
   ///
@@ -37,6 +41,11 @@ class SettingsController extends ChangeNotifier {
   /// has been stored, otherwise falls back to 12-hour AM/PM format (`false`).
   bool get is24Hour => _is24Hour;
 
+  /// Whether the phone should vibrate when a heat danger alert appears.
+  ///
+  /// Enabled by default (`true`).
+  bool get isVibrationEnabled => _vibration;
+
   /// Restores the stored settings. Call once at app startup before the first
   /// frame so the correct theme is applied immediately.
   Future<void> init() async {
@@ -46,6 +55,7 @@ class SettingsController extends ChangeNotifier {
     _darkMode = prefs.getBool(kDarkModeKey) ?? false;
     _hasStored24Hour = prefs.containsKey(k24HourKey);
     _is24Hour = prefs.getBool(k24HourKey) ?? false;
+    _vibration = prefs.getBool(kVibrationKey) ?? true;
     _initialized = true;
     notifyListeners();
   }
@@ -77,6 +87,15 @@ class SettingsController extends ChangeNotifier {
     _is24Hour = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(k24HourKey, value);
+    notifyListeners();
+  }
+
+  /// Enables or disables heat-danger vibration and persists the choice.
+  Future<void> setVibrationEnabled(bool value) async {
+    if (value == _vibration) return;
+    _vibration = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kVibrationKey, value);
     notifyListeners();
   }
 }
