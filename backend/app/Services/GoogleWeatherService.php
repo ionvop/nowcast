@@ -61,6 +61,23 @@ class GoogleWeatherService
     }
 
     /**
+     * Fetch the daily forecast for a coordinate.
+     *
+     * @param  int  $days  Number of days to forecast (default 7).
+     * @return array<string, mixed> The raw Google forecast payload.
+     */
+    public function dailyForecast(float $latitude, float $longitude, int $days = 7): array
+    {
+        return $this->get(
+            self::WEATHER_BASE.'/forecast/days:lookup',
+            [
+                'location' => ['latitude' => $latitude, 'longitude' => $longitude],
+                'days' => $days,
+            ],
+        );
+    }
+
+    /**
      * Reverse-geocode a coordinate into a human-readable address.
      *
      * @return array<string, mixed> The raw Google geocode payload.
