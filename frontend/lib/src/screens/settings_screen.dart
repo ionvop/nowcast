@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/settings_controller.dart';
 import '../theme/app_theme.dart';
+import 'privacy_policy_screen.dart';
 
 /// Settings page: currently just a dark-mode toggle (default is light mode).
 ///
@@ -141,6 +142,55 @@ class SettingsScreen extends StatelessWidget {
                             settingsController.setVibrationEnabled(value),
                       ),
                     ],
+                  ),
+                ),
+              ),
+              Card(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.privacy_tip_outlined,
+                          color: AppTheme.seed,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Privacy Policy',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Read how your data is collected and used.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                   ),
                 ),
               ),
