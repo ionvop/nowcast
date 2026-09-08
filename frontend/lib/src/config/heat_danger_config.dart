@@ -7,7 +7,7 @@
 abstract final class HeatDangerConfig {
   /// Maximum distance (in kilometres) from the user's position within which
   /// a weather location is considered "nearby" for the danger dialog.
-  static const double distanceKm = 5.0;
+  static const double distanceKm = 15.0;
 
   /// Heat-index threshold (in °C). A weather location is considered
   /// dangerous when its heat index strictly exceeds this value.
