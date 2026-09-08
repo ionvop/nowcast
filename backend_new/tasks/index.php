@@ -34,7 +34,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
     case "GET":
         if (isset($_GET["id"])) {
             $task = executePreparedQuery($db, <<<SQL
-                SELECT * FROM `todos` WHERE `id` = :id
+                SELECT * FROM `tasks` WHERE `id` = :id
             SQL, [
                 ":id" => $_GET["id"]
             ])->fetchArray(SQLITE3_ASSOC);
@@ -50,7 +50,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
         }
 
         $result = executePreparedQuery($db, <<<SQL
-            SELECT * FROM `todos`
+            SELECT * FROM `tasks`
         SQL);
 
         $tasks = [];
@@ -67,7 +67,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
         switch ($data["_method"]) {
             case "POST":
                 executePreparedQuery($db, <<<SQL
-                    INSERT INTO `todos` (`task`) VALUES (:task)
+                    INSERT INTO `tasks` (`task`) VALUES (:task)
                 SQL, [
                     ":task" => $data["task"]
                 ]);
@@ -84,7 +84,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
 
                 if (isset($data["task"])) {
                     executePreparedQuery($db, <<<SQL
-                        UPDATE `todos` SET `task` = :task WHERE `id` = :id
+                        UPDATE `tasks` SET `task` = :task WHERE `id` = :id
                     SQL, [
                         ":task" => $data["task"],
                         ":id" => $_GET["id"]
@@ -93,7 +93,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
 
                 if (isset($data["is_completed"])) {
                     executePreparedQuery($db, <<<SQL
-                        UPDATE `todos` SET `is_completed` = :is_completed WHERE `id` = :id
+                        UPDATE `tasks` SET `is_completed` = :is_completed WHERE `id` = :id
                     SQL, [
                         ":is_completed" => $data["is_completed"],
                         ":id" => $_GET["id"]
@@ -111,7 +111,7 @@ switch ($_SERVER["REQUEST_METHOD"]) {
                 }
 
                 executePreparedQuery($db, <<<SQL
-                    DELETE FROM `todos` WHERE `id` = :id
+                    DELETE FROM `tasks` WHERE `id` = :id
                 SQL, [
                     ":id" => $_GET["id"]
                 ]);
