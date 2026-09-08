@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('throttle:api')->group(function (): void {
     Route::post('/weather', [WeatherController::class, 'currentConditions']);
     Route::post('/forecast', [WeatherController::class, 'forecast']);
+    Route::post('/forecast/daily', [WeatherController::class, 'dailyForecast']);
     Route::post('/geocode', [WeatherController::class, 'geocode']);
     Route::get('/weather/icon', [WeatherController::class, 'icon']);
 
