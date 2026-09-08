@@ -12,6 +12,7 @@ class ForecastDay {
     this.feelsLikeMinC,
     this.maxHeatIndexC,
     this.precipitationPercent,
+    this.uvIndex,
   });
 
   /// The calendar date this forecast applies to, from `displayDate`.
@@ -38,6 +39,9 @@ class ForecastDay {
   /// Probability of precipitation as a percentage (0-100). Null when absent.
   final int? precipitationPercent;
 
+  /// Daytime UV index (0–11+). Null when the API did not report it.
+  final int? uvIndex;
+
   factory ForecastDay.fromJson(Map<String, dynamic> json) {
     final display = json['displayDate'];
     final daytime = json['daytimeForecast'];
@@ -55,6 +59,7 @@ class ForecastDay {
       feelsLikeMinC: _degrees(json['feelsLikeMinTemperature']),
       maxHeatIndexC: _degrees(json['maxHeatIndex']),
       precipitationPercent: _precipitationPercent(daytime),
+      uvIndex: _int(daytime),
     );
   }
 
@@ -89,6 +94,13 @@ class ForecastDay {
           return (probability['percent'] as num).toInt();
         }
       }
+    }
+    return null;
+  }
+
+  static int? _int(dynamic daytime) {
+    if (daytime is Map<String, dynamic> && daytime['uvIndex'] is num) {
+      return (daytime['uvIndex'] as num).toInt();
     }
     return null;
   }
