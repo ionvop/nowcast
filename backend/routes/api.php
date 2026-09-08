@@ -5,6 +5,7 @@ use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\HeatLocationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\WeatherController;
+use App\Http\Controllers\WeatherLocationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +28,9 @@ Route::middleware('throttle:api')->group(function (): void {
 
     Route::post('/analyze-heat-location', [HeatLocationController::class, 'analyze']);
     Route::post('/heat-locations', [HeatLocationController::class, 'index']);
+
+    Route::post('/analyze-weather-location', [WeatherLocationController::class, 'analyze']);
+    Route::post('/weather-locations', [WeatherLocationController::class, 'index']);
 
     Route::get('/posts', [PostController::class, 'index']);
     Route::get('/posts/{id}', [PostController::class, 'show']);
