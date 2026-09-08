@@ -12,6 +12,7 @@ class ForecastHour {
     this.heatIndexC,
     this.windChillC,
     this.wetBulbC,
+    this.uvIndex,
   });
 
   /// Hour of day in 24-hour format (0-23), from `displayDateTime.hours`.
@@ -37,6 +38,9 @@ class ForecastHour {
   /// Wet-bulb temperature in degrees Celsius.
   final double? wetBulbC;
 
+  /// UV index (0–11+). Null when the API did not report it.
+  final int? uvIndex;
+
   factory ForecastHour.fromJson(Map<String, dynamic> json) {
     final display = json['displayDateTime'];
     final condition = json['weatherCondition'];
@@ -53,12 +57,20 @@ class ForecastHour {
       heatIndexC: _degrees(json['heatIndex']),
       windChillC: _degrees(json['windChill']),
       wetBulbC: _degrees(json['wetBulbTemperature']),
+      uvIndex: _int(json['uvIndex']),
     );
   }
 
   static double? _degrees(dynamic value) {
     if (value is Map<String, dynamic> && value['degrees'] is num) {
       return (value['degrees'] as num).toDouble();
+    }
+    return null;
+  }
+
+  static int? _int(dynamic value) {
+    if (value is num) {
+      return value.toInt();
     }
     return null;
   }
