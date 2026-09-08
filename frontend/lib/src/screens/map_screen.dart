@@ -42,17 +42,13 @@ class _MapScreenState extends State<MapScreen> {
   bool _dialogVisible = false;
 
   /// The marker whose custom info card is currently shown, and its data.
+  ///
+  /// When non-null, the map is centered on this position and the card is shown
+  /// pinned to the bottom of the map.
   LatLng? _selectedPosition;
   double? _selectedHeatIndex;
   DateTime? _selectedCreatedAt;
   Weather? _selectedWeather;
-
-  /// Screen offset (in the map's coordinate space) of [_selectedPosition].
-  Offset? _infoWindowOffset;
-
-  /// Whether the camera is currently animating; the info card is hidden while
-  /// it moves and repositioned once it settles.
-  bool _cameraMoving = false;
 
   /// Taps delivered to the map shortly after a dialog is dismissed can be the
   /// tail of the tap that closed the dialog. Ignore taps within this window.
@@ -211,6 +207,9 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// Shows the custom info card for a marker at [position].
+  ///
+  /// Centers the map on the marker and pins the card to the bottom of the map,
+  /// so no screen-coordinate math is needed.
   void _showInfoCard(
     LatLng position,
     double heatIndex,
@@ -222,27 +221,31 @@ class _MapScreenState extends State<MapScreen> {
       _selectedHeatIndex = heatIndex;
       _selectedCreatedAt = createdAt;
       _selectedWeather = weather;
-      _infoWindowOffset = null;
     });
-    _repositionInfoWindow();
+
+    final controller = _mapController;
+    if (controller != null) {
+      controller.animateCamera(CameraUpdate.newLatLng(position));
+    }
   }
 
-  /// Converts the selected marker's geographic position to screen coordinates
-  /// and stores it as [_infoWindowOffset], so the card can be positioned over
-  /// the marker.
-  Future<void> _repositionInfoWindow() async {
-    final controller = _mapController;
-    final position = _selectedPosition;
-    if (controller == null || position == null) return;
-    try {
-      final screen = await controller.getScreenCoordinate(position);
-      if (!mounted) return;
-      setState(() {
-        _infoWindowOffset = Offset(screen.x.toDouble(), screen.y.toDouble());
-      });
-    } on Exception {
-      // Ignore: the card simply stays hidden until the next reposition.
-    }
+  /// Closes the custom info card, if shown.
+  void _closeInfoCard() {
+    if (_selectedPosition == null) return;
+    setState(() {
+      _selectedPosition = null;
+      _selectedHeatIndex = null;
+      _selectedCreatedAt = null;
+      _selectedWeather = null;
+    });
+  }
+
+  /// Handles a tap on the map itself (not on a marker).
+  ///
+  /// Closes any open info card, then analyzes the tapped spot.
+  void _handleMapTap(LatLng location) {
+    _closeInfoCard();
+    _analyzeSpot(location);
   }
 
   Future<void> _analyzeSpot(LatLng location) async {
@@ -440,54 +443,39 @@ class _MapScreenState extends State<MapScreen> {
                 _mapController = controller;
                 _applyPendingCenter();
               },
-              onTap: _analyzeSpot,
+              onTap: _handleMapTap,
               onCameraMoveStarted: () {
-                // Hide the info card while the camera moves; it is repositioned
-                // once the camera settles.
-                if (_infoWindowOffset != null) {
-                  setState(() {
-                    _cameraMoving = true;
-                    _infoWindowOffset = null;
-                  });
-                }
-              },
-              onCameraIdle: () {
-                if (_cameraMoving) {
-                  setState(() => _cameraMoving = false);
-                  _repositionInfoWindow();
-                }
+                // Moving the map closes the card.
+                _closeInfoCard();
               },
             ),
           ),
-          if (_selectedPosition != null && _infoWindowOffset != null)
-            _buildInfoCard(),
+          if (_selectedPosition != null) _buildInfoCard(),
         ],
       ),
     );
   }
 
-  /// Builds the custom info card positioned over the selected marker.
+  /// Builds the custom info card pinned to the bottom of the map.
   Widget _buildInfoCard() {
-    final offset = _infoWindowOffset!;
     final heatIndex = _selectedHeatIndex;
     final createdAt = _selectedCreatedAt;
     final weather = _selectedWeather;
 
     return Positioned(
-      left: offset.dx,
-      top: offset.dy,
-      child: FractionalTranslation(
-        translation: const Offset(-0.5, -1.0),
-        child: _InfoCard(
-          heatIndex: heatIndex,
-          createdAt: createdAt,
-          weather: weather,
-          onClose: () {
-            setState(() {
-              _selectedPosition = null;
-              _infoWindowOffset = null;
-            });
-          },
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: _InfoCard(
+            heatIndex: heatIndex,
+            createdAt: createdAt,
+            weather: weather,
+            onClose: _closeInfoCard,
+          ),
         ),
       ),
     );
