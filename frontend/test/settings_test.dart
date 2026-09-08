@@ -60,4 +60,29 @@ void main() {
       expect(restored.is24Hour, isTrue);
     });
   });
+
+  group('SettingsController vibration', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    test('vibration is enabled by default', () async {
+      final controller = SettingsController();
+      await controller.init();
+      expect(controller.isVibrationEnabled, isTrue);
+    });
+
+    test('setVibrationEnabled persists and init restores the stored value',
+        () async {
+      final controller = SettingsController();
+      await controller.init();
+      await controller.setVibrationEnabled(false);
+      expect(controller.isVibrationEnabled, isFalse);
+
+      // A fresh controller restores the persisted preference.
+      final restored = SettingsController();
+      await restored.init();
+      expect(restored.isVibrationEnabled, isFalse);
+    });
+  });
 }
