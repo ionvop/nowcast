@@ -11,7 +11,7 @@ abstract final class HeatDangerConfig {
 
   /// Heat-index threshold (in °C). A weather location is considered
   /// dangerous when its heat index strictly exceeds this value.
-  static const double thresholdC = 40.0;
+  static const double thresholdC = 42.0;
 
   /// How long to wait after showing the danger dialog before it can appear
   /// again. The last-shown timestamp is persisted via `shared_preferences`,
