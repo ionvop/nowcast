@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/api_client.dart';
+import '../models/weather.dart';
 import '../models/weather_location.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
@@ -123,16 +125,47 @@ class _MapScreenState extends State<MapScreen> {
     for (final location in locations) {
       final heatIndex = location.data?.heatIndexC;
       if (heatIndex == null) continue;
-      final icon = await buildHeatMarker(getHeatIndexColor(heatIndex));
+      final icon = await _buildMarkerIcon(location.data);
       markers.add(_markerFor(
         location.latitude,
         location.longitude,
         heatIndex,
         location.createdAt,
+        location.data,
         icon,
       ));
     }
     return markers;
+  }
+
+  /// Builds the heat-marker bitmap for [weather], overlaying the weather glyph
+  /// inside the circle when a condition icon is available.
+  ///
+  /// Falls back to the plain heat marker when the icon is missing or cannot be
+  /// fetched/decoded, so the map stays usable offline.
+  Future<BitmapDescriptor> _buildMarkerIcon(Weather? weather) async {
+    final color = getHeatIndexColor(weather?.heatIndexC ?? 0);
+    final condition = weather?.condition;
+    final baseUri = condition?.iconBaseUri ?? '';
+    if (baseUri.isEmpty) {
+      return buildHeatMarker(color);
+    }
+
+    try {
+      final bytes = await _api.getBytes(
+        'weather/icon',
+        query: <String, String>{'iconBaseUri': '$baseUri.svg'},
+      );
+      final loader = SvgBytesLoader(bytes);
+      final info = await vg.loadPicture(loader, null, clipViewbox: true);
+      return buildHeatMarkerWithIcon(
+        color,
+        weatherIcon: info.picture,
+        iconSize: info.size,
+      );
+    } on Exception {
+      return buildHeatMarker(color);
+    }
   }
 
   Marker _markerFor(
@@ -140,6 +173,7 @@ class _MapScreenState extends State<MapScreen> {
     double longitude,
     double heatIndex,
     DateTime? createdAt,
+    Weather? weather,
     BitmapDescriptor icon,
   ) {
     final id = MarkerId('heat_$latitude,$longitude');
@@ -149,7 +183,7 @@ class _MapScreenState extends State<MapScreen> {
       icon: icon,
       infoWindow: InfoWindow(
         title: 'Heat Index: ${_formatHeat(heatIndex)} °C',
-        snippet: createdAt != null ? _formatTimestamp(createdAt) : 'Unknown time',
+        snippet: buildInfoSnippet(createdAt, weather),
       ),
     );
   }
@@ -194,7 +228,7 @@ class _MapScreenState extends State<MapScreen> {
         return;
       }
 
-      final icon = await buildHeatMarker(getHeatIndexColor(heatIndex));
+      final icon = await _buildMarkerIcon(result.data);
       if (!mounted) return;
 
       final marker = _markerFor(
@@ -202,11 +236,19 @@ class _MapScreenState extends State<MapScreen> {
         result.longitude,
         heatIndex,
         result.createdAt,
+        result.data,
         icon,
       );
       setState(() {
         _markers.add(marker);
       });
+
+      // Auto-open the analyzed marker's info window so the user immediately
+      // sees the heat index, weather and precipitation for the tapped spot.
+      final controller = _mapController;
+      if (controller != null) {
+        await controller.showMarkerInfoWindow(marker.markerId);
+      }
     } on ApiException catch (e) {
       _removeLoadingMarker(loadingId);
       _showAlert('Could not analyze this location', e.message);
@@ -283,10 +325,6 @@ class _MapScreenState extends State<MapScreen> {
 
   String _formatHeat(double value) => value.toStringAsFixed(1);
 
-  String _formatTimestamp(DateTime time) {
-    return formatTimestamp(time, use24Hour: settingsController.is24Hour);
-  }
-
   void _openSettings() {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
@@ -343,4 +381,31 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
   }
+}
+
+/// Builds the heat-marker info-window snippet: the reading time, plus the
+/// current weather condition and precipitation probability when available.
+///
+/// Each present line is separated by a newline so it reads as a small list in
+/// the map info window. Extracted as a top-level function for unit testing.
+String buildInfoSnippet(DateTime? createdAt, Weather? weather) {
+  final lines = <String>[
+    createdAt != null ? 'Read at: ${_fmtTimestamp(createdAt)}' : 'Unknown time',
+  ];
+
+  final description = weather?.condition.description ?? '';
+  if (description.isNotEmpty) {
+    lines.add('Weather: $description');
+  }
+
+  final precipitation = weather?.precipitationPercent;
+  if (precipitation != null) {
+    lines.add('Precipitation: $precipitation%');
+  }
+
+  return lines.join('\n');
+}
+
+String _fmtTimestamp(DateTime time) {
+  return formatTimestamp(time, use24Hour: settingsController.is24Hour);
 }
