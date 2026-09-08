@@ -245,9 +245,18 @@ class _MapScreenState extends State<MapScreen> {
 
       // Auto-open the analyzed marker's info window so the user immediately
       // sees the heat index, weather and precipitation for the tapped spot.
+      //
+      // This is best-effort: the platform may not have synced the freshly
+      // added marker yet, so the call can throw "Invalid markerId". A failure
+      // here must NOT surface as an analysis error — the marker is already
+      // placed and the user can tap it to open the window.
       final controller = _mapController;
       if (controller != null) {
-        await controller.showMarkerInfoWindow(marker.markerId);
+        try {
+          await controller.showMarkerInfoWindow(marker.markerId);
+        } on Exception {
+          // Ignore: the info window is a convenience, not a requirement.
+        }
       }
     } on ApiException catch (e) {
       _removeLoadingMarker(loadingId);
