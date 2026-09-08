@@ -42,6 +42,9 @@ dependencies:
   # SVG rendering for weather icons.
   flutter_svg: ^2.2.1
 
+  # Decoding SVG bytes into dart:ui Pictures for map-marker compositing.
+  vector_graphics: ^1.1.19
+
   # Line chart for the Heat Data page.
   fl_chart: ^1.1.0
 
