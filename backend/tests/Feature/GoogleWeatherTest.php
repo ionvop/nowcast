@@ -54,6 +54,53 @@ test('6-hour forecast proxied from the Google Weather API', function (): void {
     });
 });
 
+test('7-day forecast proxied from the Google Weather API', function (): void {
+    Http::fake([
+        'weather.googleapis.com/*' => Http::response([
+            'forecastDays' => ['forecast' => ['sunny']],
+        ], 200),
+    ]);
+
+    $this->postJson('/api/forecast/daily', [
+        'latitude' => 37.7749,
+        'longitude' => -122.4194,
+    ])->assertOk()->assertJson([
+        'forecastDays' => ['forecast' => ['sunny']],
+    ]);
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/v1/forecast/days:lookup')
+            && $request['location.latitude'] == 37.7749
+            && $request['location.longitude'] == -122.4194
+            && $request['days'] == 7
+            && $request['key'] === 'test-google-key';
+    });
+});
+
+test('daily forecast honors an explicit days value', function (): void {
+    Http::fake([
+        'weather.googleapis.com/*' => Http::response([
+            'forecastDays' => ['forecast' => ['sunny']],
+        ], 200),
+    ]);
+
+    $this->postJson('/api/forecast/daily', [
+        'latitude' => 37.7749,
+        'longitude' => -122.4194,
+        'days' => 3,
+    ])->assertOk();
+
+    Http::assertSent(fn ($request) => $request['days'] == 3);
+});
+
+test('daily forecast rejects days outside the allowed range', function (): void {
+    $this->postJson('/api/forecast/daily', [
+        'latitude' => 37.7749,
+        'longitude' => -122.4194,
+        'days' => 15,
+    ])->assertStatus(400)->assertJsonStructure(['message']);
+});
+
 test('reverse geocoding proxied from the Google Geocode API', function (): void {
     Http::fake([
         'geocode.googleapis.com/*' => Http::response([
