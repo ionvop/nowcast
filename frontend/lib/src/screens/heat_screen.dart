@@ -185,6 +185,12 @@ class _HeatChartState extends State<_HeatChart> {
     _DaySeries('Min Temp', const Color(0xFF1e88e5), (d) => d.minTemperatureC),
   ];
 
+  static final _Series _uvSeries = _Series(
+    'UV Index',
+    const Color(0xFF7b1fa2),
+    (h) => h.uvIndex?.toDouble(),
+  );
+
   @override
   Widget build(BuildContext context) {
     final isHourly = _mode == _Mode.hourly;
@@ -232,6 +238,23 @@ class _HeatChartState extends State<_HeatChart> {
           ),
           const SizedBox(height: 12),
           _Legend(series: series),
+          const SizedBox(height: 24),
+          Text(
+            isHourly ? 'Hourly UV Index' : 'Daily UV Index',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+              child: SizedBox(height: 220, child: LineChart(_uvData())),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _Legend(series: <Object>[_uvSeries]),
         ],
       ),
     );
@@ -239,6 +262,10 @@ class _HeatChartState extends State<_HeatChart> {
 
   LineChartData _data() {
     return _mode == _Mode.hourly ? _hourlyData() : _dailyData();
+  }
+
+  LineChartData _uvData() {
+    return _mode == _Mode.hourly ? _hourlyUvData() : _dailyUvData();
   }
 
   LineChartData _hourlyData() {
@@ -429,6 +456,216 @@ class _HeatChartState extends State<_HeatChart> {
     );
   }
 
+  LineChartData _hourlyUvData() {
+    final hours = widget.hours;
+    final indexOf = <double, int>{};
+    for (var i = 0; i < hours.length; i++) {
+      indexOf[i.toDouble()] = i;
+    }
+
+    return LineChartData(
+      lineBarsData: <LineChartBarData>[
+        LineChartBarData(
+          spots: _uvSpots(),
+          color: _uvSeries.color,
+          barWidth: 2,
+          isCurved: true,
+          curveSmoothness: 0.3,
+          isStrokeCapRound: true,
+          isStrokeJoinRound: true,
+          dotData: const FlDotData(show: true),
+        ),
+      ],
+      minX: 0,
+      maxX: (hours.length - 1).toDouble(),
+      gridData: FlGridData(
+        drawVerticalLine: true,
+        getDrawingVerticalLine: (value) =>
+            const FlLine(color: Color(0x11000000), strokeWidth: 1),
+        getDrawingHorizontalLine: (value) =>
+            const FlLine(color: Color(0x22000000), strokeWidth: 1),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: const Border(
+          left: BorderSide(color: Color(0x44000000)),
+          bottom: BorderSide(color: Color(0x44000000)),
+        ),
+      ),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        leftTitles: AxisTitles(
+          axisNameWidget: const Text('UV Index'),
+          axisNameSize: 28,
+          sideTitles: const SideTitles(
+            showTitles: true,
+            reservedSize: 44,
+            interval: 1,
+            getTitlesWidget: _yTitle,
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          axisNameWidget: const Text('Hour'),
+          axisNameSize: 28,
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 34,
+            interval: 1,
+            getTitlesWidget: (value, meta) {
+              final index = indexOf[value];
+              if (index == null) {
+                return const SizedBox.shrink();
+              }
+              return SideTitleWidget(
+                meta: meta,
+                child: ListenableBuilder(
+                  listenable: settingsController,
+                  builder: (context, _) => Text(
+                    formatHour(
+                      hours[index].hour24,
+                      use24Hour: settingsController.is24Hour,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (spot) => const Color(0xCC212121),
+          getTooltipItems: _uvTooltipItems,
+          fitInsideVertically: true,
+        ),
+        getTouchedSpotIndicator: (barData, spotIndexes) {
+          return spotIndexes.map((index) {
+            final color = barData.color ?? const Color(0xFF3949ab);
+            return TouchedSpotIndicatorData(
+              FlLine(color: color, strokeWidth: 1.5),
+              FlDotData(
+                getDotPainter: (spot, percent, bar, dotIndex) =>
+                    FlDotCirclePainter(
+                      radius: 4,
+                      color: bar.color ?? const Color(0xFF3949ab),
+                      strokeColor: Colors.white,
+                      strokeWidth: 2,
+                    ),
+              ),
+            );
+          }).toList();
+        },
+        distanceCalculator: (touchPoint, spotPixelCoordinates) {
+          return (touchPoint.dx - spotPixelCoordinates.dx).abs();
+        },
+      ),
+    );
+  }
+
+  LineChartData _dailyUvData() {
+    final days = widget.days;
+    final indexOf = <double, int>{};
+    for (var i = 0; i < days.length; i++) {
+      indexOf[i.toDouble()] = i;
+    }
+
+    return LineChartData(
+      lineBarsData: <LineChartBarData>[
+        LineChartBarData(
+          spots: _dayUvSpots(),
+          color: _uvSeries.color,
+          barWidth: 2,
+          isCurved: true,
+          curveSmoothness: 0.3,
+          isStrokeCapRound: true,
+          isStrokeJoinRound: true,
+          dotData: const FlDotData(show: true),
+        ),
+      ],
+      minX: 0,
+      maxX: (days.length - 1).toDouble(),
+      gridData: FlGridData(
+        drawVerticalLine: true,
+        getDrawingVerticalLine: (value) =>
+            const FlLine(color: Color(0x11000000), strokeWidth: 1),
+        getDrawingHorizontalLine: (value) =>
+            const FlLine(color: Color(0x22000000), strokeWidth: 1),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: const Border(
+          left: BorderSide(color: Color(0x44000000)),
+          bottom: BorderSide(color: Color(0x44000000)),
+        ),
+      ),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        leftTitles: AxisTitles(
+          axisNameWidget: const Text('UV Index'),
+          axisNameSize: 28,
+          sideTitles: const SideTitles(
+            showTitles: true,
+            reservedSize: 44,
+            interval: 1,
+            getTitlesWidget: _yTitle,
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          axisNameWidget: const Text('Day'),
+          axisNameSize: 28,
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 34,
+            interval: 1,
+            getTitlesWidget: (value, meta) {
+              final index = indexOf[value];
+              if (index == null) {
+                return const SizedBox.shrink();
+              }
+              return SideTitleWidget(
+                meta: meta,
+                child: Text(_dayLabel(days[index].date)),
+              );
+            },
+          ),
+        ),
+      ),
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (spot) => const Color(0xCC212121),
+          getTooltipItems: _uvTooltipItems,
+          fitInsideVertically: true,
+        ),
+        getTouchedSpotIndicator: (barData, spotIndexes) {
+          return spotIndexes.map((index) {
+            final color = barData.color ?? const Color(0xFF3949ab);
+            return TouchedSpotIndicatorData(
+              FlLine(color: color, strokeWidth: 1.5),
+              FlDotData(
+                getDotPainter: (spot, percent, bar, dotIndex) =>
+                    FlDotCirclePainter(
+                      radius: 4,
+                      color: bar.color ?? const Color(0xFF3949ab),
+                      strokeColor: Colors.white,
+                      strokeWidth: 2,
+                    ),
+              ),
+            );
+          }).toList();
+        },
+        distanceCalculator: (touchPoint, spotPixelCoordinates) {
+          return (touchPoint.dx - spotPixelCoordinates.dx).abs();
+        },
+      ),
+    );
+  }
+
   List<LineChartBarData> _barData() {
     return _series.map((series) {
       return LineChartBarData(
@@ -487,6 +724,34 @@ class _HeatChartState extends State<_HeatChart> {
     return spots;
   }
 
+  List<FlSpot> _uvSpots() {
+    final spots = <FlSpot>[];
+    final hours = widget.hours;
+    for (var i = 0; i < hours.length; i++) {
+      final value = hours[i].uvIndex;
+      if (value == null) {
+        spots.add(FlSpot.nullSpot);
+      } else {
+        spots.add(FlSpot(i.toDouble(), value.toDouble()));
+      }
+    }
+    return spots;
+  }
+
+  List<FlSpot> _dayUvSpots() {
+    final spots = <FlSpot>[];
+    final days = widget.days;
+    for (var i = 0; i < days.length; i++) {
+      final value = days[i].uvIndex;
+      if (value == null) {
+        spots.add(FlSpot.nullSpot);
+      } else {
+        spots.add(FlSpot(i.toDouble(), value.toDouble()));
+      }
+    }
+    return spots;
+  }
+
   static Widget _yTitle(double value, TitleMeta meta) {
     return SideTitleWidget(meta: meta, child: Text('${value.round()}°'));
   }
@@ -512,6 +777,18 @@ class _HeatChartState extends State<_HeatChart> {
       final color = spot.bar.color ?? Colors.white;
       return LineTooltipItem(
         '$label: ${spot.y.toStringAsFixed(1)} °C',
+        TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13),
+      );
+    }).toList();
+  }
+
+  static List<LineTooltipItem> _uvTooltipItems(
+    List<LineBarSpot> touchedSpots,
+  ) {
+    return touchedSpots.map((spot) {
+      final color = spot.bar.color ?? Colors.white;
+      return LineTooltipItem(
+        'UV Index: ${spot.y.round()}',
         TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13),
       );
     }).toList();
