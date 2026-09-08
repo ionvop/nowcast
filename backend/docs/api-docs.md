@@ -2,7 +2,7 @@
 
 This document is the authoritative reference for the **Nowcast** backend API. It is intended to be used as the contract when building the Flutter client (Android, iOS, and web/PWA).
 
-The backend is a **headless JSON API** built with Laravel 13 + Sanctum. It proxies Google Weather, Geocoding, and OAuth APIs, and persists users, posts, and crowd-sourced heat-index readings.
+The backend is a **headless JSON API** built with Laravel 13 + Sanctum. It proxies Google Weather, Geocoding, and OAuth APIs, and persists users, posts, and crowd-sourced weather readings.
 
 ---
 
@@ -103,6 +103,8 @@ Endpoints that accept a coordinate validate:
 
 ### 4.3 HeatLocation
 
+> **DEPRECATED** — This model is superseded by [WeatherLocation](#44-weatherlocation), which stores the entire weather payload instead of only the heat index. It is kept for backward compatibility and will be removed in a future release. New clients should use the weather-location endpoints (§5.8, §5.9).
+
 | Field | Type | Notes |
 |---|---|---|
 | `id` | integer | |
@@ -113,6 +115,19 @@ Endpoints that accept a coordinate validate:
 | `updated_at` | string (ISO 8601) | |
 
 **Expiry / dedup:** rows older than **1 hour** or with a **NULL** `heat_index` are purged. Readings within ~**0.001° (~100 m)** of a new point are replaced (deduplicated).
+
+### 4.4 WeatherLocation
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | integer | |
+| `data` | object | The **entire** Google current-conditions payload (see §5.1 for the shape). Stored as JSON; the client reads any weather field it needs (temperature, feels-like, heat index, humidity, wind, etc.) |
+| `latitude` | decimal (7 dp) | Serialized as a JSON number |
+| `longitude` | decimal (7 dp) | Serialized as a JSON number |
+| `created_at` | string (ISO 8601) | Used for 1h expiry |
+| `updated_at` | string (ISO 8601) | |
+
+**Expiry / dedup:** rows older than **1 hour** are purged. Readings within ~**0.001° (~100 m)** of a new point are replaced (deduplicated).
 
 ---
 
@@ -420,6 +435,8 @@ GET /api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/sunny.svg
 
 ### 5.6 Heat Locations — Analyze
 
+> **DEPRECATED** — Superseded by [Weather Locations — Analyze](#58-weather-locations--analyze), which returns the full weather payload. Kept for backward compatibility; will be removed in a future release.
+
 Fetches the current heat index for a coordinate, replaces any nearby reading, and returns the stored reading.
 
 ```
@@ -463,6 +480,8 @@ POST /api/analyze-heat-location
 
 ### 5.7 Heat Locations — List
 
+> **DEPRECATED** — Superseded by [Weather Locations — List](#59-weather-locations--list). Kept for backward compatibility; will be removed in a future release.
+
 Returns all current heat-location readings.
 
 ```
@@ -494,7 +513,99 @@ POST /api/heat-locations
 
 ---
 
-### 5.8 Posts — List
+### 5.8 Weather Locations — Analyze
+
+Fetches the full current weather payload for a coordinate, replaces any nearby reading, and returns the stored reading.
+
+```
+POST /api/analyze-weather-location
+```
+
+**Auth:** none
+
+**Request body:**
+
+```json
+{
+  "latitude": 40.7128,
+  "longitude": -74.0060
+}
+```
+
+**Behavior:**
+1. Fetch the current conditions for the point.
+2. Purge rows older than 1 hour.
+3. Delete existing rows within ~0.001° (~100 m) of the point.
+4. Insert the new reading with the **entire** current-conditions payload.
+
+**Success — `200`:**
+
+```json
+{
+  "data": {
+    "currentTime": "2025-01-28T22:04:12.025273178Z",
+    "timeZone": { "id": "America/Los_Angeles" },
+    "isDaytime": true,
+    "weatherCondition": {
+      "iconBaseUri": "https://maps.gstatic.com/weather/v1/sunny",
+      "description": { "text": "Sunny", "languageCode": "en" },
+      "type": "CLEAR"
+    },
+    "temperature": { "degrees": 28.5, "unit": "CELSIUS" },
+    "feelsLikeTemperature": { "degrees": 31.2, "unit": "CELSIUS" },
+    "heatIndex": { "degrees": 33.0, "unit": "CELSIUS" },
+    "relativeHumidity": 65
+  },
+  "latitude": 40.7128,
+  "longitude": -74.0060,
+  "createdAt": "2026-08-12T12:00:00.000000Z"
+}
+```
+
+> `data` is the **raw Google current-conditions payload** (see §5.1) and may vary; the client should treat it as opaque and read the fields it needs defensively. `latitude` and `longitude` are serialized as JSON **numbers**. The heat index, when needed, is read from `data.heatIndex.degrees` (falling back to `data.feelsLikeTemperature.degrees` / `data.temperature.degrees`), and may be absent when the heat index cannot be calculated.
+
+**Errors:** `400` validation, `502` upstream.
+
+---
+
+### 5.9 Weather Locations — List
+
+Returns all current weather-location readings.
+
+```
+POST /api/weather-locations
+```
+
+**Auth:** none
+
+**Request body:** none (empty `{}`).
+
+**Behavior:** rows older than 1 hour are purged first.
+
+**Success — `200`:** array of `WeatherLocation` objects (`data` is the full payload; `latitude`, `longitude` are JSON numbers):
+
+```json
+[
+  {
+    "id": 1,
+    "data": {
+      "temperature": { "degrees": 28.5, "unit": "CELSIUS" },
+      "feelsLikeTemperature": { "degrees": 31.2, "unit": "CELSIUS" },
+      "heatIndex": { "degrees": 33.0, "unit": "CELSIUS" }
+    },
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "created_at": "2026-08-12T12:00:00.000000Z",
+    "updated_at": "2026-08-12T12:00:00.000000Z"
+  }
+]
+```
+
+**Errors:** `502` upstream (unlikely; no coordinate required).
+
+---
+
+### 5.10 Posts — List
 
 Returns all current posts, newest first, each with its embedded author.
 
@@ -532,7 +643,7 @@ GET /api/posts
 
 ---
 
-### 5.9 Posts — Show
+### 5.11 Posts — Show
 
 Returns a single post with its embedded author.
 
@@ -548,14 +659,14 @@ GET /api/posts/{id}
 |---|---|---|
 | `id` | integer | Post ID |
 
-**Success — `200`:** a single `Post` object with embedded `user` (same shape as one item in [§5.6](#56-posts--list)).
+**Success — `200`:** a single `Post` object with embedded `user` (same shape as one item in [§5.10](#510-posts--list)).
 
 **Errors:**
 - `404` — `{"message": "Post not found."}`
 
 ---
 
-### 5.10 Posts — Create
+### 5.12 Posts — Create
 
 Creates a new post for the authenticated user.
 
@@ -609,7 +720,7 @@ POST /api/posts
 
 ---
 
-### 5.11 Posts — Delete
+### 5.13 Posts — Delete
 
 Deletes a post owned by the authenticated user.
 
@@ -637,7 +748,7 @@ DELETE /api/posts/{id}
 
 ---
 
-### 5.12 Profile
+### 5.14 Profile
 
 Returns the currently authenticated user's profile.
 
@@ -665,7 +776,7 @@ GET /api/profile
 
 ---
 
-### 5.13 Logout
+### 5.15 Logout
 
 Revokes the current Sanctum token and signs the user out.
 
@@ -686,7 +797,7 @@ POST /api/logout
 
 ---
 
-### 5.14 Posts — By User
+### 5.16 Posts — By User
 
 Returns all current posts by a specified user, newest first, each with its
 embedded author. Posts older than 24 hours are purged first.
@@ -704,7 +815,7 @@ GET /api/users/{id}/posts
 | `id` | integer | User ID |
 
 **Success — `200`:** array of `Post` objects with embedded `user` (same shape
-as one item in [§5.7](#57-posts--list)):
+as one item in [§5.10](#510-posts--list)):
 
 ```json
 [
@@ -805,9 +916,9 @@ The client should:
 - [ ] `Content-Type: application/json` on all requests.
 - [ ] Attach `Authorization: Bearer <token>` when authenticated.
 - [ ] Handle `401` (clear token, redirect to Profile), `404`, and network errors with user-friendly messages.
-- [ ] Typed models for `Weather`, `ForecastHour`, `HeatLocation`, `Post`, `User`.
+- [ ] Typed models for `Weather`, `ForecastHour`, `WeatherLocation`, `Post`, `User`.
 - [ ] Cancel stale in-flight requests when navigating away or pressing Reload.
-- [ ] Handle `heatIndex: null` from `analyze-heat-location` (data-unavailable alert).
+- [ ] Read the heat index from `WeatherLocation.data.heatIndex.degrees` (falling back to `feelsLikeTemperature` / `temperature`); handle a missing heat index (data-unavailable alert).
 - [ ] OAuth deep-link interception on native; fragment token reading on web.
 
 ---
@@ -819,8 +930,10 @@ The client should:
 | POST | `/api/weather` | No | `{latitude, longitude}` | `200` raw current conditions |
 | POST | `/api/forecast` | No | `{latitude, longitude}` | `200` raw 6h forecast |
 | POST | `/api/geocode` | No | `{latitude, longitude}` | `200` raw geocode |
-| POST | `/api/analyze-heat-location` | No | `{latitude, longitude}` | `200` `{heatIndex, latitude, longitude, createdAt}` |
-| POST | `/api/heat-locations` | No | `{}` | `200` array of heat locations |
+| POST | `/api/analyze-heat-location` | No | `{latitude, longitude}` | `200` `{heatIndex, latitude, longitude, createdAt}` *(deprecated)* |
+| POST | `/api/heat-locations` | No | `{}` | `200` array of heat locations *(deprecated)* |
+| POST | `/api/analyze-weather-location` | No | `{latitude, longitude}` | `200` `{data, latitude, longitude, createdAt}` |
+| POST | `/api/weather-locations` | No | `{}` | `200` array of weather locations |
 | GET | `/api/posts` | No | — | `200` array of posts + user |
 | GET | `/api/posts/{id}` | No | — | `200` post + user |
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
