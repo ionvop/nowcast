@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @property float $latitude
  * @property float $longitude
  * @property int|null $hours
+ * @property int|null $days
  */
 class CoordinateRequest extends FormRequest
 {
@@ -25,6 +26,7 @@ class CoordinateRequest extends FormRequest
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'hours' => ['sometimes', 'integer', 'min:1', 'max:360'],
+            'days' => ['sometimes', 'integer', 'min:1', 'max:14'],
         ];
     }
 }
