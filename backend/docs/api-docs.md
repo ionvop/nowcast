@@ -254,7 +254,114 @@ wind chill, wet-bulb) from the fields it needs:
 
 ---
 
-### 5.3 Weather — Reverse Geocode
+### 5.3 Weather — Daily Forecast
+
+Returns the raw Google daily forecast payload for a coordinate. The payload is
+the **raw Google Weather API response** and may vary; the client should treat it
+as opaque. The example below shows the real Google shape (see
+`docs/endpoint-responses.md`).
+
+```
+POST /api/forecast/daily
+```
+
+**Auth:** none
+
+**Request body:**
+
+```json
+{
+  "latitude": 40.7128,
+  "longitude": -74.0060,
+  "days": 7
+}
+```
+
+**Parameters:**
+
+- `latitude` *(required, number, -90 to 90)*
+- `longitude` *(required, number, -180 to 180)*
+- `days` *(optional, integer, 1 to 14)* — the number of days to forecast.
+  When omitted, the server default of **7 days** is used.
+
+**Success — `200`:** raw Google forecast JSON with a `forecastDays` array. Each
+entry carries a `displayDate`, `daytimeForecast` / `nighttimeForecast` blocks,
+`maxTemperature` / `minTemperature`, `sunEvents`, and `moonEvents`:
+
+```json
+{
+  "forecastDays": [
+    {
+      "interval": { "startTime": "2025-02-10T15:00:00Z", "endTime": "2025-02-11T15:00:00Z" },
+      "displayDate": { "year": 2025, "month": 2, "day": 10 },
+      "daytimeForecast": {
+        "interval": { "startTime": "2025-02-10T15:00:00Z", "endTime": "2025-02-11T03:00:00Z" },
+        "weatherCondition": {
+          "iconBaseUri": "https://maps.gstatic.com/weather/v1/partly_cloudy",
+          "description": { "text": "Partly sunny", "languageCode": "en" },
+          "type": "PARTLY_CLOUDY"
+        },
+        "relativeHumidity": 54,
+        "uvIndex": 3,
+        "precipitation": {
+          "probability": { "percent": 5, "type": "RAIN" },
+          "qpf": { "quantity": 0, "unit": "MILLIMETERS" }
+        },
+        "thunderstormProbability": 0,
+        "wind": {
+          "direction": { "degrees": 280, "cardinal": "WEST" },
+          "speed": { "value": 6, "unit": "KILOMETERS_PER_HOUR" },
+          "gust": { "value": 14, "unit": "KILOMETERS_PER_HOUR" }
+        },
+        "cloudCover": 53
+      },
+      "nighttimeForecast": {
+        "interval": { "startTime": "2025-02-11T03:00:00Z", "endTime": "2025-02-11T15:00:00Z" },
+        "weatherCondition": {
+          "iconBaseUri": "https://maps.gstatic.com/weather/v1/partly_clear",
+          "description": { "text": "Partly cloudy", "languageCode": "en" },
+          "type": "PARTLY_CLOUDY"
+        },
+        "relativeHumidity": 85,
+        "uvIndex": 0,
+        "precipitation": {
+          "probability": { "percent": 10, "type": "RAIN_AND_SNOW" },
+          "qpf": { "quantity": 0, "unit": "MILLIMETERS" }
+        },
+        "thunderstormProbability": 0,
+        "wind": {
+          "direction": { "degrees": 201, "cardinal": "SOUTH_SOUTHWEST" },
+          "speed": { "value": 6, "unit": "KILOMETERS_PER_HOUR" },
+          "gust": { "value": 14, "unit": "KILOMETERS_PER_HOUR" }
+        },
+        "cloudCover": 70
+      },
+      "maxTemperature": { "degrees": 13.3, "unit": "CELSIUS" },
+      "minTemperature": { "degrees": 1.5, "unit": "CELSIUS" },
+      "feelsLikeMaxTemperature": { "degrees": 13.3, "unit": "CELSIUS" },
+      "feelsLikeMinTemperature": { "degrees": 1.5, "unit": "CELSIUS" },
+      "sunEvents": {
+        "sunriseTime": "2025-02-10T15:02:35.703929582Z",
+        "sunsetTime": "2025-02-11T01:43:00.762932858Z"
+      },
+      "moonEvents": {
+        "moonPhase": "WAXING_GIBBOUS",
+        "moonriseTimes": ["2025-02-10T23:54:17.713157984Z"],
+        "moonsetTimes": ["2025-02-10T14:13:58.625181191Z"]
+      },
+      "maxHeatIndex": { "degrees": 13.3, "unit": "CELSIUS" },
+      "iceThickness": { "thickness": 0, "unit": "MILLIMETERS" }
+    }
+  ],
+  "timeZone": { "id": "America/Los_Angeles" }
+}
+```
+
+**Errors:** `400` validation, `502` upstream.
+
+---
+
+### 5.4 Weather — Reverse Geocode
 
 Returns the raw Google geocode payload for a coordinate (used to derive a human-readable address/city).
 
@@ -279,7 +386,7 @@ POST /api/geocode
 
 ---
 
-### 5.4 Weather — Icon Proxy
+### 5.5 Weather — Icon Proxy
 
 Proxies a weather icon image from the Google static CDN. The client passes the
 absolute icon URL (the `iconBaseUri` from a weather/forecast payload, with the
@@ -311,7 +418,7 @@ GET /api/weather/icon?iconBaseUri=https://maps.gstatic.com/weather/v1/sunny.svg
 
 ---
 
-### 5.5 Heat Locations — Analyze
+### 5.6 Heat Locations — Analyze
 
 Fetches the current heat index for a coordinate, replaces any nearby reading, and returns the stored reading.
 
@@ -354,7 +461,7 @@ POST /api/analyze-heat-location
 
 ---
 
-### 5.6 Heat Locations — List
+### 5.7 Heat Locations — List
 
 Returns all current heat-location readings.
 
@@ -387,7 +494,7 @@ POST /api/heat-locations
 
 ---
 
-### 5.7 Posts — List
+### 5.8 Posts — List
 
 Returns all current posts, newest first, each with its embedded author.
 
@@ -425,7 +532,7 @@ GET /api/posts
 
 ---
 
-### 5.8 Posts — Show
+### 5.9 Posts — Show
 
 Returns a single post with its embedded author.
 
@@ -448,7 +555,7 @@ GET /api/posts/{id}
 
 ---
 
-### 5.9 Posts — Create
+### 5.10 Posts — Create
 
 Creates a new post for the authenticated user.
 
@@ -502,7 +609,7 @@ POST /api/posts
 
 ---
 
-### 5.10 Posts — Delete
+### 5.11 Posts — Delete
 
 Deletes a post owned by the authenticated user.
 
@@ -530,7 +637,7 @@ DELETE /api/posts/{id}
 
 ---
 
-### 5.11 Profile
+### 5.12 Profile
 
 Returns the currently authenticated user's profile.
 
@@ -558,7 +665,7 @@ GET /api/profile
 
 ---
 
-### 5.12 Logout
+### 5.13 Logout
 
 Revokes the current Sanctum token and signs the user out.
 
@@ -579,7 +686,7 @@ POST /api/logout
 
 ---
 
-### 5.13 Posts — By User
+### 5.14 Posts — By User
 
 Returns all current posts by a specified user, newest first, each with its
 embedded author. Posts older than 24 hours are purged first.
