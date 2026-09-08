@@ -41,6 +41,19 @@ class _MapScreenState extends State<MapScreen> {
   bool _analyzing = false;
   bool _dialogVisible = false;
 
+  /// The marker whose custom info card is currently shown, and its data.
+  LatLng? _selectedPosition;
+  double? _selectedHeatIndex;
+  DateTime? _selectedCreatedAt;
+  Weather? _selectedWeather;
+
+  /// Screen offset (in the map's coordinate space) of [_selectedPosition].
+  Offset? _infoWindowOffset;
+
+  /// Whether the camera is currently animating; the info card is hidden while
+  /// it moves and repositioned once it settles.
+  bool _cameraMoving = false;
+
   /// Taps delivered to the map shortly after a dialog is dismissed can be the
   /// tail of the tap that closed the dialog. Ignore taps within this window.
   static const Duration _dialogCooldown = Duration(milliseconds: 350);
@@ -181,11 +194,55 @@ class _MapScreenState extends State<MapScreen> {
       markerId: id,
       position: LatLng(latitude, longitude),
       icon: icon,
+      // Consume taps so the native (tiny, truncating) info window never
+      // appears; we render our own custom info card instead.
+      consumeTapEvents: true,
+      onTap: () => _showInfoCard(
+        LatLng(latitude, longitude),
+        heatIndex,
+        createdAt,
+        weather,
+      ),
       infoWindow: InfoWindow(
         title: 'Heat Index: ${_formatHeat(heatIndex)} °C',
         snippet: buildInfoSnippet(createdAt, weather),
       ),
     );
+  }
+
+  /// Shows the custom info card for a marker at [position].
+  void _showInfoCard(
+    LatLng position,
+    double heatIndex,
+    DateTime? createdAt,
+    Weather? weather,
+  ) {
+    setState(() {
+      _selectedPosition = position;
+      _selectedHeatIndex = heatIndex;
+      _selectedCreatedAt = createdAt;
+      _selectedWeather = weather;
+      _infoWindowOffset = null;
+    });
+    _repositionInfoWindow();
+  }
+
+  /// Converts the selected marker's geographic position to screen coordinates
+  /// and stores it as [_infoWindowOffset], so the card can be positioned over
+  /// the marker.
+  Future<void> _repositionInfoWindow() async {
+    final controller = _mapController;
+    final position = _selectedPosition;
+    if (controller == null || position == null) return;
+    try {
+      final screen = await controller.getScreenCoordinate(position);
+      if (!mounted) return;
+      setState(() {
+        _infoWindowOffset = Offset(screen.x.toDouble(), screen.y.toDouble());
+      });
+    } on Exception {
+      // Ignore: the card simply stays hidden until the next reposition.
+    }
   }
 
   Future<void> _analyzeSpot(LatLng location) async {
@@ -243,21 +300,15 @@ class _MapScreenState extends State<MapScreen> {
         _markers.add(marker);
       });
 
-      // Auto-open the analyzed marker's info window so the user immediately
-      // sees the heat index, weather and precipitation for the tapped spot.
-      //
-      // This is best-effort: the platform may not have synced the freshly
-      // added marker yet, so the call can throw "Invalid markerId". A failure
-      // here must NOT surface as an analysis error — the marker is already
-      // placed and the user can tap it to open the window.
-      final controller = _mapController;
-      if (controller != null) {
-        try {
-          await controller.showMarkerInfoWindow(marker.markerId);
-        } on Exception {
-          // Ignore: the info window is a convenience, not a requirement.
-        }
-      }
+      // Auto-open the custom info card for the freshly analyzed marker so the
+      // user immediately sees the heat index, weather and precipitation for
+      // the tapped spot.
+      _showInfoCard(
+        LatLng(result.latitude, result.longitude),
+        heatIndex,
+        result.createdAt,
+        result.data,
+      );
     } on ApiException catch (e) {
       _removeLoadingMarker(loadingId);
       _showAlert('Could not analyze this location', e.message);
@@ -377,16 +428,154 @@ class _MapScreenState extends State<MapScreen> {
     }
     return IgnorePointer(
       ignoring: _dialogVisible,
-      child: GoogleMap(
-        initialCameraPosition: CameraPosition(target: center, zoom: 13),
-        markers: _markers,
-        myLocationEnabled: true,
-        myLocationButtonEnabled: true,
-        onMapCreated: (controller) {
-          _mapController = controller;
-          _applyPendingCenter();
-        },
-        onTap: _analyzeSpot,
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(target: center, zoom: 13),
+              markers: _markers,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              onMapCreated: (controller) {
+                _mapController = controller;
+                _applyPendingCenter();
+              },
+              onTap: _analyzeSpot,
+              onCameraMoveStarted: () {
+                // Hide the info card while the camera moves; it is repositioned
+                // once the camera settles.
+                if (_infoWindowOffset != null) {
+                  setState(() {
+                    _cameraMoving = true;
+                    _infoWindowOffset = null;
+                  });
+                }
+              },
+              onCameraIdle: () {
+                if (_cameraMoving) {
+                  setState(() => _cameraMoving = false);
+                  _repositionInfoWindow();
+                }
+              },
+            ),
+          ),
+          if (_selectedPosition != null && _infoWindowOffset != null)
+            _buildInfoCard(),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the custom info card positioned over the selected marker.
+  Widget _buildInfoCard() {
+    final offset = _infoWindowOffset!;
+    final heatIndex = _selectedHeatIndex;
+    final createdAt = _selectedCreatedAt;
+    final weather = _selectedWeather;
+
+    return Positioned(
+      left: offset.dx,
+      top: offset.dy,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -1.0),
+        child: _InfoCard(
+          heatIndex: heatIndex,
+          createdAt: createdAt,
+          weather: weather,
+          onClose: () {
+            setState(() {
+              _selectedPosition = null;
+              _infoWindowOffset = null;
+            });
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// A custom info card shown over the map for a selected heat marker.
+///
+/// The native `google_maps_flutter` info window is text-only and truncates
+/// long snippets, so this card renders the full heat-index, time, weather and
+/// precipitation details with full layout control.
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.heatIndex,
+    required this.createdAt,
+    required this.weather,
+    required this.onClose,
+  });
+
+  final double? heatIndex;
+  final DateTime? createdAt;
+  final Weather? weather;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final description = weather?.condition.description ?? '';
+
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(12),
+      color: theme.colorScheme.surface,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 260),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'Heat Index: ${heatIndex != null ? heatIndex!.toStringAsFixed(1) : '--'} °C',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: onClose,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              if (createdAt != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Read at: ${_fmtTimestamp(createdAt!)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              if (description.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Weather: $description',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+              if (weather?.precipitationPercent != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Precipitation: ${weather!.precipitationPercent}%',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
