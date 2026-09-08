@@ -2,7 +2,7 @@
 
 ## Get current conditions
 
-```
+```bash
 curl -X GET "https://weather.googleapis.com/v1/currentConditions:lookup?key=YOUR_API_KEY&location.latitude=37.4220&location.longitude=-122.0841"
 ```
 
@@ -99,7 +99,7 @@ curl -X GET "https://weather.googleapis.com/v1/currentConditions:lookup?key=YOUR
 
 ## Get hourly forecast
 
-```
+```bash
 curl -X GET "https://weather.googleapis.com/v1/forecast/hours:lookup?key=YOUR_API_KEY&location.latitude=37.4220&location.longitude=-122.0841&hours=3"
 ```
 
@@ -252,9 +252,183 @@ curl -X GET "https://weather.googleapis.com/v1/forecast/hours:lookup?key=YOUR_AP
 }
 ```
 
+## Get daily forecast
+
+```bash
+curl -X GET "https://weather.googleapis.com/v1/forecast/days:lookup?key=YOUR_API_KEY&location.latitude=37.4220&location.longitude=-122.0841&days=2"
+```
+
+```json
+{
+  "forecastDays": [
+    {
+      "interval": {
+        "startTime": "2025-02-10T15:00:00Z",
+        "endTime": "2025-02-11T15:00:00Z"
+      },
+      "displayDate": {
+        "year": 2025,
+        "month": 2,
+        "day": 10
+      },
+      "daytimeForecast": {
+        "interval": {
+          "startTime": "2025-02-10T15:00:00Z",
+          "endTime": "2025-02-11T03:00:00Z"
+        },
+        "weatherCondition": {
+          "iconBaseUri": "https://maps.gstatic.com/weather/v1/partly_cloudy",
+          "description": {
+            "text": "Partly sunny",
+            "languageCode": "en"
+          },
+          "type": "PARTLY_CLOUDY"
+        },
+        "relativeHumidity": 54,
+        "uvIndex": 3,
+        "precipitation": {
+          "probability": {
+            "percent": 5,
+            "type": "RAIN"
+          },
+          "qpf": {
+            "quantity": 0,
+            "unit": "MILLIMETERS"
+          }
+        },
+        "thunderstormProbability": 0,
+        "wind": {
+          "direction": {
+            "degrees": 280,
+            "cardinal": "WEST"
+          },
+          "speed": {
+            "value": 6,
+            "unit": "KILOMETERS_PER_HOUR"
+          },
+          "gust": {
+            "value": 14,
+            "unit": "KILOMETERS_PER_HOUR"
+          }
+        },
+        "cloudCover": 53
+      },
+      "nighttimeForecast": {
+        "interval": {
+          "startTime": "2025-02-11T03:00:00Z",
+          "endTime": "2025-02-11T15:00:00Z"
+        },
+        "weatherCondition": {
+          "iconBaseUri": "https://maps.gstatic.com/weather/v1/partly_clear",
+          "description": {
+            "text": "Partly cloudy",
+            "languageCode": "en"
+          },
+          "type": "PARTLY_CLOUDY"
+        },
+        "relativeHumidity": 85,
+        "uvIndex": 0,
+        "precipitation": {
+          "probability": {
+            "percent": 10,
+            "type": "RAIN_AND_SNOW"
+          },
+          "qpf": {
+            "quantity": 0,
+            "unit": "MILLIMETERS"
+          }
+        },
+        "thunderstormProbability": 0,
+        "wind": {
+          "direction": {
+            "degrees": 201,
+            "cardinal": "SOUTH_SOUTHWEST"
+          },
+          "speed": {
+            "value": 6,
+            "unit": "KILOMETERS_PER_HOUR"
+          },
+          "gust": {
+            "value": 14,
+            "unit": "KILOMETERS_PER_HOUR"
+          }
+        },
+        "cloudCover": 70
+      },
+      "maxTemperature": {
+        "degrees": 13.3,
+        "unit": "CELSIUS"
+      },
+      "minTemperature": {
+        "degrees": 1.5,
+        "unit": "CELSIUS"
+      },
+      "feelsLikeMaxTemperature": {
+        "degrees": 13.3,
+        "unit": "CELSIUS"
+      },
+      "feelsLikeMinTemperature": {
+        "degrees": 1.5,
+        "unit": "CELSIUS"
+      },
+      "sunEvents": {
+        "sunriseTime": "2025-02-10T15:02:35.703929582Z",
+        "sunsetTime": "2025-02-11T01:43:00.762932858Z"
+      },
+      "moonEvents": {
+        "moonPhase": "WAXING_GIBBOUS",
+        "moonriseTimes": [
+          "2025-02-10T23:54:17.713157984Z"
+        ],
+        "moonsetTimes": [
+          "2025-02-10T14:13:58.625181191Z"
+        ]
+      },
+      "maxHeatIndex": {
+        "degrees": 13.3,
+        "unit": "CELSIUS"
+      },
+      "iceThickness": {
+        "thickness": 0,
+        "unit": "MILLIMETERS"
+      }
+    },
+    {
+      "interval": {
+        "startTime": "2025-02-11T15:00:00Z",
+        "endTime": "2025-02-12T15:00:00Z"
+      },
+      "displayDate": {
+        "year": 2025,
+        "month": 2,
+        "day": 11
+      },
+      "daytimeForecast": {
+        "interval": {
+          "startTime": "2025-02-11T15:00:00Z",
+          "endTime": "2025-02-12T03:00:00Z"
+        },
+        "weatherCondition": {
+          "iconBaseUri": "https://maps.gstatic.com/weather/v1/scattered_showers",
+          "description": {
+            "text": "Scattered showers",
+            "languageCode": "en"
+          },
+          "type": "SCATTERED_SHOWERS"
+        },
+      /.../
+      }
+    }
+  ],
+  "timeZone": {
+    "id": "America/Los_Angeles"
+  }
+}
+```
+
 ## Reverse geocoding
 
-```
+```bash
 curl -X GET "https://geocode.googleapis.com/v4/geocode/location?location.latitude=37.4220&location.longitude=-122.0841&key=YOUR_API_KEY"
 ```
 
