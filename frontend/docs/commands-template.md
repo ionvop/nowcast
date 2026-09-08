@@ -10,12 +10,6 @@
 http://localhost:8000/api
 ```
 
-**Staging**
-
-```
-https://stage.ionvop.com/nowcast/public/api
-```
-
 **Production**
 
 ```
@@ -48,10 +42,4 @@ flutter run -d web-server --web-port 8080 --web-define=GOOGLE_MAPS_CLIENT_KEY=__
 
 ```bash
 flutter run --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
-```
-
-### Build
-
-```bash
-flutter build apk --release --target-platform android-arm64 --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
 ```
