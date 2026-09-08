@@ -50,6 +50,11 @@ class _MapScreenState extends State<MapScreen> {
   DateTime? _selectedCreatedAt;
   Weather? _selectedWeather;
 
+  /// Whether the current camera movement was triggered by showing the info
+  /// card (centering on a marker). When true, [onCameraMoveStarted] must NOT
+  /// close the card; the flag is cleared once the camera settles.
+  bool _keepCardOpen = false;
+
   /// Taps delivered to the map shortly after a dialog is dismissed can be the
   /// tail of the tap that closed the dialog. Ignore taps within this window.
   static const Duration _dialogCooldown = Duration(milliseconds: 350);
@@ -225,6 +230,9 @@ class _MapScreenState extends State<MapScreen> {
 
     final controller = _mapController;
     if (controller != null) {
+      // Keep the card open during the programmatic centering animation; the
+      // flag is cleared once the camera settles (see onCameraIdle).
+      _keepCardOpen = true;
       controller.animateCamera(CameraUpdate.newLatLng(position));
     }
   }
@@ -445,8 +453,18 @@ class _MapScreenState extends State<MapScreen> {
               },
               onTap: _handleMapTap,
               onCameraMoveStarted: () {
-                // Moving the map closes the card.
-                _closeInfoCard();
+                // Moving the map closes the card — unless the movement is the
+                // programmatic centering triggered by showing the card.
+                if (!_keepCardOpen) {
+                  _closeInfoCard();
+                }
+              },
+              onCameraIdle: () {
+                // The centering animation finished; allow future movements to
+                // close the card again.
+                if (_keepCardOpen) {
+                  _keepCardOpen = false;
+                }
               },
             ),
           ),
