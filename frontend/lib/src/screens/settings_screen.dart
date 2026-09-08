@@ -19,6 +19,7 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, _) {
           final darkMode = settingsController.isDarkMode;
           final is24Hour = settingsController.is24Hour;
+          final vibration = settingsController.isVibrationEnabled;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -97,6 +98,47 @@ class SettingsScreen extends StatelessWidget {
                         value: is24Hour,
                         onChanged: (value) =>
                             settingsController.set24Hour(value),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.phone, color: AppTheme.seed),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              'Vibration',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Vibrate the phone when a heat danger alert '
+                              'appears.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: vibration,
+                        onChanged: (value) =>
+                            settingsController.setVibrationEnabled(value),
                       ),
                     ],
                   ),
