@@ -32,6 +32,7 @@ class Weather {
     this.heatIndexC,
     this.uvIndex,
     this.precipitationPercent,
+    this.precipitationQpfQuantity,
     this.relativeHumidity,
     this.conditionType = '',
   });
@@ -53,6 +54,10 @@ class Weather {
   /// Probability of precipitation as a percentage (0–100). Null when absent.
   final int? precipitationPercent;
 
+  /// Quantitative precipitation forecast in millimeters (0+). Null when the
+  /// API did not report it.
+  final double? precipitationQpfQuantity;
+
   /// Relative humidity as a percentage (0–100). Null when absent.
   final int? relativeHumidity;
 
@@ -70,6 +75,8 @@ class Weather {
       heatIndexC: _degrees(json['heatIndex']),
       uvIndex: _int(json['uvIndex']),
       precipitationPercent: _precipitationPercent(json['precipitation']),
+      precipitationQpfQuantity:
+          _precipitationQpfQuantity(json['precipitation']),
       relativeHumidity: _int(json['relativeHumidity']),
       conditionType: _conditionType(condition),
     );
@@ -96,6 +103,18 @@ class Weather {
       if (probability is Map<String, dynamic>) {
         final percent = probability['percent'];
         if (percent is num) return percent.toInt();
+      }
+    }
+    return null;
+  }
+
+  /// Extracts `precipitation.qpf.quantity` (rainfall in mm) from the nested map.
+  static double? _precipitationQpfQuantity(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      final qpf = value['qpf'];
+      if (qpf is Map<String, dynamic>) {
+        final quantity = qpf['quantity'];
+        if (quantity is num) return quantity.toDouble();
       }
     }
     return null;
