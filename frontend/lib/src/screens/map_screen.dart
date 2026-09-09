@@ -13,6 +13,7 @@ import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../utils/heat_color.dart';
 import '../utils/heat_danger.dart';
+import '../utils/flood_danger.dart';
 import '../utils/map_focus.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
@@ -428,13 +429,19 @@ class _MapScreenState extends State<MapScreen> {
     _vibrating = false;
   }
 
-  /// Checks whether any nearby crowd-sourced reading is dangerously hot and, if
-  /// so, shows a one-time danger dialog (subject to a persisted cooldown).
+  /// Checks whether any nearby crowd-sourced reading is dangerously hot or
+  /// predicts heavy rain and, if so, shows a one-time danger dialog (subject
+  /// to a persisted cooldown).
 
   /// Called once after the map finishes loading on startup. No-op when the map
   /// failed to load, when a dialog is already visible, when no nearby
   /// reading exceeds the danger threshold, or when the cooldown is still
   /// active.
+
+  /// The flood-danger check runs first and takes priority: when a nearby
+  /// reading both predicts heavy rain and is dangerously hot, the flood
+  /// dialog is shown. Both dialogs share the same cooldown, so showing one
+  /// suppresses the other for the cooldown period.
 
   Future<void> _maybeShowDangerAlert(
     double userLat,
@@ -442,6 +449,17 @@ class _MapScreenState extends State<MapScreen> {
     List<WeatherLocation> locations,
   ) async {
     if (!mounted || _dialogVisible) return;
+
+    // Flood danger takes priority over heat danger.
+    final floodDanger = findNearestFloodDanger(
+      locations,
+      userLat: userLat,
+      userLon: userLon,
+    );
+    if (floodDanger != null) {
+      await _showFloodAlert(userLat, userLon, floodDanger);
+      return;
+    }
 
     final danger = findNearestDanger(
       locations,
@@ -486,6 +504,53 @@ class _MapScreenState extends State<MapScreen> {
       '${heatIndex.toStringAsFixed(1)} °C$address, about '
       '${distance.toStringAsFixed(1)} km from your location. '
       'Take precautions to stay cool and hydrated.',
+    );
+  }
+
+  /// Shows the flood-danger dialog for [danger], subject to the shared
+  /// danger cooldown. No-op when the cooldown is still active.
+  Future<void> _showFloodAlert(
+    double userLat,
+    double userLon,
+    WeatherLocation danger,
+  ) async {
+    if (!await heatDangerCooldown.canShow()) return;
+    await heatDangerCooldown.recordShown();
+    if (!mounted) return;
+
+    final qpf = danger.data?.precipitationQpfQuantity ?? 0;
+    final pop = danger.data?.precipitationPercent ?? 0;
+    final distance = haversineKm(
+      userLat,
+      userLon,
+      danger.latitude,
+      danger.longitude,
+    );
+
+    // Worst-case address looks up; default to a message without it when the
+    // reverse-geocode request fails or returns nothing.
+    String address = '';
+    try {
+      final geocodeJson = await _api.post('geocode', <String, dynamic>{
+        'latitude': danger.latitude,
+        'longitude': danger.longitude,
+      });
+      final parsed = addressFromGeocode(geocodeJson);
+      if (parsed != null) address = ' at $parsed';
+    } on Exception {
+      // Leave address empty and show the message without it.
+    }
+
+    if (!mounted) return;
+    if (settingsController.isVibrationEnabled) {
+      _startDangerVibration();
+    }
+    _showAlert(
+      'Flood danger',
+      'A nearby weather reading expects ${qpf.toStringAsFixed(1)} mm of '
+      'rain with a $pop% chance of precipitation$address, about '
+      '${distance.toStringAsFixed(1)} km from your location. '
+      'Take precautions against flooding.',
     );
   }
 
