@@ -12,6 +12,7 @@ class ForecastDay {
     this.feelsLikeMinC,
     this.maxHeatIndexC,
     this.precipitationPercent,
+    this.precipitationQpfQuantity,
     this.uvIndex,
   });
 
@@ -39,6 +40,10 @@ class ForecastDay {
   /// Probability of precipitation as a percentage (0-100). Null when absent.
   final int? precipitationPercent;
 
+  /// Quantitative precipitation forecast in millimeters (0+). Null when the
+  /// API did not report it.
+  final double? precipitationQpfQuantity;
+
   /// Daytime UV index (0–11+). Null when the API did not report it.
   final int? uvIndex;
 
@@ -59,6 +64,7 @@ class ForecastDay {
       feelsLikeMinC: _degrees(json['feelsLikeMinTemperature']),
       maxHeatIndexC: _degrees(json['maxHeatIndex']),
       precipitationPercent: _precipitationPercent(daytime),
+      precipitationQpfQuantity: _precipitationQpfQuantity(daytime),
       uvIndex: _int(daytime),
     );
   }
@@ -92,6 +98,21 @@ class ForecastDay {
         if (probability is Map<String, dynamic> &&
             probability['percent'] is num) {
           return (probability['percent'] as num).toInt();
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Extracts `precipitation.qpf.quantity` (rainfall in mm) from the nested map.
+  static double? _precipitationQpfQuantity(dynamic daytime) {
+    if (daytime is Map<String, dynamic>) {
+      final precipitation = daytime['precipitation'];
+      if (precipitation is Map<String, dynamic>) {
+        final qpf = precipitation['qpf'];
+        if (qpf is Map<String, dynamic>) {
+          final quantity = qpf['quantity'];
+          if (quantity is num) return quantity.toDouble();
         }
       }
     }
