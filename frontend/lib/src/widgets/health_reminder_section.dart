@@ -27,23 +27,29 @@ class HealthReminder {
 /// Computes a health reminder from the current [weather].
 ///
 /// Rules are evaluated in priority order — the first matching condition wins:
-/// 1. Flood risk: heavy rain (high precipitation probability).
-/// 2. Rain: moderate precipitation probability → take an umbrella.
+/// 1. Flood risk: heavy rain (high precipitation probability, confirmed by a
+///    high quantitative precipitation forecast when reported).
+/// 2. Rain: moderate precipitation probability (confirmed by a meaningful
+///    quantitative precipitation forecast when reported) → take an umbrella.
 /// 3. High UV index → apply SPF.
 /// 4. High heat index → stay cool / hydrate.
 /// 5. High humidity → comfort note.
 /// 6. Otherwise a neutral "enjoy the weather" reminder.
 ///
+/// When the quantitative precipitation forecast (`precipitationQpfQuantity`)
+/// is not reported, the probability-based rules apply on their own.
+///
 /// Returns a neutral reminder when [weather] is null or lacks the data needed
 /// to make a decision.
 HealthReminder determineHealthReminder(Weather? weather) {
   final precip = weather?.precipitationPercent;
+  final qpf = weather?.precipitationQpfQuantity;
   final uv = weather?.uvIndex;
   final heatIndex = weather?.heatIndexC;
   final humidity = weather?.relativeHumidity;
 
-  // Flood risk — heavy rain.
-  if (precip != null && precip >= 70) {
+  // Flood risk — heavy rain (>=10mm when qpf is reported).
+  if (precip != null && precip >= 70 && (qpf == null || qpf >= 10)) {
     return const HealthReminder(
       emoji: '🌊',
       title: 'Flood risk',
@@ -51,8 +57,8 @@ HealthReminder determineHealthReminder(Weather? weather) {
     );
   }
 
-  // Rain — take an umbrella.
-  if (precip != null && precip >= 40) {
+  // Rain — take an umbrella (>=2mm when qpf is reported).
+  if (precip != null && precip >= 40 && (qpf == null || qpf >= 2)) {
     return const HealthReminder(
       emoji: '☔',
       title: 'Take an umbrella',
