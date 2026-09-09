@@ -6,6 +6,7 @@ import 'package:nowcast/src/widgets/health_reminder_section.dart';
 void main() {
   Weather makeWeather({
     int? precipitationPercent,
+    double? precipitationQpfQuantity,
     int? uvIndex,
     double? heatIndexC,
     int? relativeHumidity,
@@ -17,6 +18,7 @@ void main() {
       heatIndexC: heatIndexC,
       uvIndex: uvIndex,
       precipitationPercent: precipitationPercent,
+      precipitationQpfQuantity: precipitationQpfQuantity,
       relativeHumidity: relativeHumidity,
       conditionType: '',
     );
@@ -31,12 +33,44 @@ void main() {
       expect(reminder.emoji, '🌊');
     });
 
+    test('flood risk when precipitation is very high and qpf is high', () {
+      final reminder = determineHealthReminder(
+        makeWeather(precipitationPercent: 85, precipitationQpfQuantity: 15),
+      );
+      expect(reminder.title, 'Flood risk');
+      expect(reminder.emoji, '🌊');
+    });
+
+    test('no flood risk when qpf is low despite high probability', () {
+      final reminder = determineHealthReminder(
+        makeWeather(precipitationPercent: 85, precipitationQpfQuantity: 2),
+      );
+      expect(reminder.title, 'Take an umbrella');
+      expect(reminder.emoji, '☔');
+    });
+
     test('umbrella when precipitation is moderate', () {
       final reminder = determineHealthReminder(
         makeWeather(precipitationPercent: 50),
       );
       expect(reminder.title, 'Take an umbrella');
       expect(reminder.emoji, '☔');
+    });
+
+    test('umbrella when precipitation is moderate and qpf is meaningful', () {
+      final reminder = determineHealthReminder(
+        makeWeather(precipitationPercent: 50, precipitationQpfQuantity: 5),
+      );
+      expect(reminder.title, 'Take an umbrella');
+      expect(reminder.emoji, '☔');
+    });
+
+    test('no umbrella when qpf is negligible despite moderate probability', () {
+      final reminder = determineHealthReminder(
+        makeWeather(precipitationPercent: 50, precipitationQpfQuantity: 0.5),
+      );
+      expect(reminder.title, 'Enjoy the weather');
+      expect(reminder.emoji, '🌤️');
     });
 
     test('SPF when UV index is high', () {
