@@ -10,7 +10,7 @@ Nowcast helps you monitor current weather conditions, extreme-heat risk in your 
 - **A community feed** where signed-in users can post short updates, optionally tagged with their location
 - **Heat alerts** — a background service that notifies you when the heat index crosses a danger threshold you set
 
-This repository is the **Flutter client** (Android, iOS, and web/PWA). It talks to a headless **Laravel 13 + Sanctum** JSON API that proxies Google Weather, Geocoding, and OAuth. See [`docs/api-docs.md`](docs/api-docs.md) for the API contract.
+This repository is the **Flutter client** (Android and iOS). It talks to a headless **Laravel 13 + Sanctum** JSON API that proxies Google Weather, Geocoding, and OAuth. See [`docs/api-docs.md`](docs/api-docs.md) for the API contract.
 
 ---
 
@@ -57,7 +57,7 @@ You must be signed in to create or delete posts. Viewing weather, heat data, the
 
 ## Tech Stack
 
-- **Flutter / Dart** — cross-platform client (Android, iOS, web/PWA, plus desktop targets).
+- **Flutter / Dart** — cross-platform client (Android and iOS).
 - **Laravel 13 + Sanctum** — headless JSON backend that proxies Google Weather, Geocoding, and OAuth APIs and persists users, posts, and crowd-sourced heat-index readings.
 - **Google OAuth** — sign-in via the backend's redirect endpoint; the Sanctum token is delivered back to the app through a `nowcast://auth` deep link and persisted locally.
 
@@ -121,10 +121,6 @@ flutter run -d android
 
 # iOS
 flutter run -d ios
-
-# Web / PWA (with Maps key)
-flutter run -d web-server --web-port 8080 \
-  --dart-define=GOOGLE_MAPS_CLIENT_KEY=YOUR_API_KEY
 ```
 
 See [`docs/commands.md`](docs/commands.md) for additional run commands.
