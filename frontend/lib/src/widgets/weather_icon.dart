@@ -14,7 +14,7 @@ import '../api/api_client.dart';
 ///
 /// The icon is fetched through the backend proxy endpoint
 /// (`GET /api/weather/icon?iconBaseUri=...`) rather than directly from the
-/// Google CDN, so the web build avoids CORS errors.
+/// Google CDN, so the app avoids CORS errors.
 ///
 /// The SVG bytes are fetched with our own HTTP client and rendered via
 /// [SvgPicture.memory] rather than [SvgPicture.network]. This avoids a
