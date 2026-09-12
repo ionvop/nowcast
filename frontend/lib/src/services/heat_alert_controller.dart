@@ -38,14 +38,12 @@ class HeatAlertController extends ChangeNotifier {
   /// The heat-index danger threshold in degrees Celsius.
   double get threshold => _threshold;
 
-  /// Whether a native background service backs this platform. Web does not run
-  /// a persistent background service.
+  /// Whether a native background service backs this platform.
   bool get hasNativeBackgroundService => _nativeServiceAvailable;
 
   static bool _defaultNativeServiceAvailable() {
-    return !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   /// Restores the stored state and, if the toggle was left on, ensures the
