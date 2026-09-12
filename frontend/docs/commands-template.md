@@ -32,12 +32,6 @@ Paste your Maps SDK for Android API key here
 
 ## Command templates
 
-### Test on browser
-
-```bash
-flutter run -d web-server --web-port 8080 --web-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=GOOGLE_MAPS_CLIENT_KEY=___ --dart-define=API_BASE_URL=___
-```
-
 ### Run on device
 
 ```bash
