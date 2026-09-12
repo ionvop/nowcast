@@ -1,6 +1,6 @@
 # Nowcast API Reference
 
-This document is the authoritative reference for the **Nowcast** backend API. It is intended to be used as the contract when building the Flutter client (Android, iOS, and web/PWA).
+This document is the authoritative reference for the **Nowcast** backend API. It is intended to be used as the contract when building the Flutter client (Android and iOS).
 
 The backend is a **headless JSON API** built with Laravel 13 + Sanctum. It proxies Google Weather, Geocoding, and OAuth APIs, and persists users, posts, and crowd-sourced weather readings.
 
@@ -12,13 +12,12 @@ The backend is a **headless JSON API** built with Laravel 13 + Sanctum. It proxi
 - **Format:** JSON request/response bodies (`Content-Type: application/json`).
 - **Authentication:** optional for most endpoints; required for creating/deleting posts, viewing the profile, and logging out. Uses **Laravel Sanctum** Bearer tokens.
 - **Rate limiting:** all routes are wrapped in the `throttle:api` middleware.
-- **CORS:** `allowed_origins => ['*']`. Native clients send no browser `Origin` header and are not subject to CORS; the web build is served from the same origin behind a reverse proxy.
+- **CORS:** `allowed_origins => ['*']`. Native clients send no browser `Origin` header and are not subject to CORS.
 
 ### Base URL per platform
 
 | Platform | Base URL |
 |---|---|
-| Web / PWA | `/api` (reverse proxy serves the Flutter build and the API under `/api`) |
 | Android emulator | `http://10.0.2.2:8000/api` |
 | iOS simulator / real device / production | `https://yourdomain.com/api` |
 
@@ -860,8 +859,7 @@ GET /api/auth/google/redirect?returnTo=<target>
 
 | Param | Type | Notes |
 |---|---|---|
-| `returnTo` | string \| optional | Where the callback should send the browser (and the issued token) afterwards. Carried through the OAuth `state` parameter. Only the configured web origin and the native custom scheme (`GOOGLE_NATIVE_SCHEME`, default `nowcast`) are allowed; any other value falls back to the web origin (prevents open redirects). |
-
+| `returnTo` | string \| optional | Where the callback should send the browser (and the issued token) afterwards. Carried through the OAuth `state` parameter. Only the native custom scheme (`GOOGLE_NATIVE_SCHEME`, default `nowcast`) is allowed; any other value falls back to the web origin (prevents open redirects). |
 **Success — `302`:** redirects the browser to the Google consent screen (`accounts.google.com/o/oauth2/v2/auth`).
 
 ### 6.2 OAuth callback
@@ -900,11 +898,10 @@ GET /api/auth/google/callback?code=<code>&state=<returnTo>
 
 ### 6.3 Client handling
 
-- **Web / PWA:** the `redirect_uri` is the web app page URL; the client reads the token from the URL fragment after the callback redirect.
 - **Android / iOS (native):** the `redirect_uri` is a **custom scheme / universal link** (e.g. `com.yourcompany.nowcast:/oauth2callback`). The native app intercepts the deep link, extracts the token from the fragment, and stores it securely.
 
 The client should:
-1. Store the token via the auth-store adapter (secure storage on native, localStorage on web).
+1. Store the token via the auth-store adapter (secure storage on native).
 2. Attach it as `Authorization: Bearer <token>` on authenticated requests.
 3. On `#error=1`, show a sign-in failure message.
 
@@ -912,14 +909,14 @@ The client should:
 
 ## 7. Client Integration Checklist (Flutter)
 
-- [ ] Central `ApiClient` with the platform base-URL adapter (`/api` on web, absolute URL on native).
+- [ ] Central `ApiClient` with the platform base-URL adapter (absolute URL on native).
 - [ ] `Content-Type: application/json` on all requests.
 - [ ] Attach `Authorization: Bearer <token>` when authenticated.
 - [ ] Handle `401` (clear token, redirect to Profile), `404`, and network errors with user-friendly messages.
 - [ ] Typed models for `Weather`, `ForecastHour`, `WeatherLocation`, `Post`, `User`.
 - [ ] Cancel stale in-flight requests when navigating away or pressing Reload.
 - [ ] Read the heat index from `WeatherLocation.data.heatIndex.degrees` (falling back to `feelsLikeTemperature` / `temperature`); handle a missing heat index (data-unavailable alert).
-- [ ] OAuth deep-link interception on native; fragment token reading on web.
+- [ ] OAuth deep-link interception on native.
 
 ---
 
