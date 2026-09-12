@@ -54,18 +54,11 @@ class AuthController extends ChangeNotifier {
   bool get isInitialized => _initialized;
 
   /// Restores the stored token and starts listening for deep-link callbacks.
-  ///
-  /// On web, also scans the current URL fragment for a post-consent token
-  /// (the browser may land back on the app's URL with `#token=...`).
   Future<void> init() async {
     if (_initialized) return;
 
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(kTokenPrefsKey);
-
-    if (kIsWeb) {
-      await _handleIncomingUri(Uri.base);
-    }
 
     _listenForAuthLinks();
 
@@ -79,8 +72,8 @@ class AuthController extends ChangeNotifier {
       if (uri != null) _handleIncomingUri(uri);
     });
 
-    // Cold start: the very first link (web / singleTop relaunch) may not be
-    // emitted on the stream, so grab it here if not already handled.
+    // Cold start: the very first link (singleTop relaunch) may not be emitted
+    // on the stream, so grab it here if not already handled.
     _appLinks.getInitialLink().then((Uri? uri) {
       if (uri != null) _handleIncomingUri(uri);
     });
@@ -89,10 +82,10 @@ class AuthController extends ChangeNotifier {
   /// Builds the backend Google consent URL and opens it in the browser.
   ///
   /// [returnTo] is the fragment target the server redirects back to after
-  /// consent: on web the same-origin origin, on native the `nowcast://` deep
-  /// link. Throws a [StateError] if the page could not be opened.
+  /// consent: the `nowcast://` deep link. Throws a [StateError] if the page
+  /// could not be opened.
   Future<void> signIn() async {
-    final target = kIsWeb ? Uri.base.origin : '$kAuthScheme://$kAuthHost';
+    final target = '$kAuthScheme://$kAuthHost';
     final uri = Uri.parse(
       '${AppConfig.baseUrl}/auth/google/redirect',
     ).replace(queryParameters: <String, String>{'returnTo': target});
