@@ -83,7 +83,7 @@ HeatAlertStatus determineHeatAlertStatus({
 
 /// Initializes the background service (Android foreground service / iOS
 /// background fetch). Safe to call more than once. On platforms without a
-/// native background service (web, desktop) this is a no-op.
+/// native background service this is a no-op.
 Future<void> configureHeatAlertService() async {
   if (!_supportsNativeService) return;
 
@@ -360,6 +360,5 @@ Future<void> _showStatus(
 /// Whether the current platform can host a persistent background service.
 /// flutter_background_service only supports Android and iOS.
 bool get _supportsNativeService =>
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS);
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
