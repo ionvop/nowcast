@@ -46,6 +46,10 @@ class _MapScreenState extends State<MapScreen> {
   bool _analyzing = false;
   bool _dialogVisible = false;
 
+  /// The currently selected map tile type: the default roadmap view
+  /// ([MapType.normal]) or the satellite view ([MapType.satellite]).
+  MapType _mapType = MapType.normal;
+
   /// Whether the heat-danger vibration loop is currently running. Guards
   /// against starting the loop more than once.
   bool _vibrating = false;
@@ -564,6 +568,16 @@ class _MapScreenState extends State<MapScreen> {
 
   String _formatHeat(double value) => value.toStringAsFixed(1);
 
+  /// Toggles the map between the default roadmap view and the satellite view.
+  ///
+  /// Rebuilding the [GoogleMap] with a new `mapType` pushes the change to the
+  /// platform, so the map switches live without recreating the widget.
+  void _toggleMapType() {
+    setState(() {
+      _mapType = _mapType == MapType.normal ? MapType.satellite : MapType.normal;
+    });
+  }
+
   void _openSettings() {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
@@ -581,6 +595,13 @@ class _MapScreenState extends State<MapScreen> {
         ),
         title: const Text('Heat Map'),
         actions: <Widget>[
+          IconButton(
+            icon: Icon(
+              _mapType == MapType.normal ? Icons.layers_outlined : Icons.layers,
+            ),
+            tooltip: _mapType == MapType.normal ? 'Satellite view' : 'Map view',
+            onPressed: _toggleMapType,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Reload',
@@ -612,6 +633,7 @@ class _MapScreenState extends State<MapScreen> {
           Positioned.fill(
             child: GoogleMap(
               initialCameraPosition: CameraPosition(target: center, zoom: 13),
+              mapType: _mapType,
               markers: _markers,
               myLocationEnabled: true,
               myLocationButtonEnabled: true,
