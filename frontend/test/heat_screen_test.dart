@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
@@ -232,5 +233,71 @@ void main() {
       find.text('No forecast data is available for your location right now.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('tapping a spot pins the tooltip until tapping elsewhere', (
+    tester,
+  ) async {
+    await pumpHeatScreen(tester);
+
+    // The first hourly chart is the temperature chart. Tap near its center.
+    final chart = find.byType(LineChart).first;
+    expect(
+      tester.widget<LineChart>(chart).data.showingTooltipIndicators,
+      isEmpty,
+    );
+
+    await tester.tapAt(tester.getCenter(chart));
+    await tester.pumpAndSettle();
+
+    // A pinned tooltip appears and persists without holding.
+    final pinnedData = tester.widget<LineChart>(chart).data;
+    expect(pinnedData.showingTooltipIndicators, isNotEmpty);
+    final pinnedSpots =
+        pinnedData.showingTooltipIndicators.single.showingSpots;
+    expect(pinnedSpots.length, greaterThanOrEqualTo(2)); // multiple series
+    // The pinned index is respected on each bar's indicators.
+    final pinnedIndex = pinnedSpots.first.spotIndex;
+    for (final bar in pinnedData.lineBarsData) {
+      expect(bar.showingIndicators, <int>[pinnedIndex]);
+    }
+
+    // Tapping elsewhere in the content (here, on the title) clears the
+    // pinned tooltip.
+    await tester.tapAt(tester.getCenter(find.text('Hourly Temperature Forecast')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<LineChart>(chart).data.showingTooltipIndicators,
+      isEmpty,
+    );
+    for (final bar in tester.widget<LineChart>(chart).data.lineBarsData) {
+      expect(bar.showingIndicators, isEmpty);
+    }
+  });
+
+  testWidgets('tapping a spot on the UV chart pins its tooltip', (
+    tester,
+  ) async {
+    await pumpHeatScreen(tester);
+
+    // Scroll the UV chart into view.
+    await tester.scrollUntilVisible(
+      find.text('Hourly UV Index'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    final uvChart = find.byType(LineChart).last;
+    await tester.tapAt(tester.getCenter(uvChart));
+    await tester.pumpAndSettle();
+
+    final data = tester.widget<LineChart>(uvChart).data;
+    expect(data.showingTooltipIndicators, isNotEmpty);
+    final pinnedIndex = data.showingTooltipIndicators.single
+        .showingSpots
+        .first
+        .spotIndex;
+    expect(data.lineBarsData.single.showingIndicators, <int>[pinnedIndex]);
   });
 }
