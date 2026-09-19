@@ -843,6 +843,65 @@ Returns an empty array (`[]`) when the user exists but has no current posts.
 
 ---
 
+### 5.17 AI Summary
+
+Generates a short AI analysis of the current conditions and forecast payloads,
+a short paragraph of health advice based on the conditions, and a single link to
+an article recommended by the AI for the user to read.
+
+The client supplies the weather payloads it already fetched (via §5.1, §5.2,
+§5.3) in the request body; the server does **not** call Google again. The payloads
+are sent to an LLM hosted on OpenRouter (model `deepseek/deepseek-v4-flash-0731:online`
+by default, overridable with `OPENROUTER_MODEL`) which returns structured JSON.
+
+```
+POST /api/ai/summary
+```
+
+**Auth:** none
+
+**Request body:**
+
+```json
+{
+  "currentConditions": {
+    "temperature": { "degrees": 33.0, "unit": "CELSIUS" },
+    "feelsLikeTemperature": { "degrees": 38.0, "unit": "CELSIUS" },
+    "heatIndex": { "degrees": 41.0, "unit": "CELSIUS" },
+    "relativeHumidity": 70,
+    "weatherCondition": { "description": { "text": "Sunny" }, "type": "CLEAR" }
+  },
+  "hourlyForecast": {
+    "forecastHours": [ /* ... */ ]
+  },
+  "dailyForecast": {
+    "forecastDays": [ /* ... */ ]
+  }
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `currentConditions` | object | required — the raw Google current-conditions payload |
+| `hourlyForecast` | object | optional — the raw Google hourly forecast payload |
+| `dailyForecast` | object | optional — the raw Google daily forecast payload |
+
+**Success — `200`:**
+
+```json
+{
+  "summary": "Hot and humid with a heat index of 41°C; sunshine continues into the afternoon before showers arrive tonight.",
+  "healthAdvice": "Heat is the main risk. Limit strenuous outdoor activity, drink water, and take breaks in the shade or air conditioning during peak hours.",
+  "articleUrl": "https://www.cdc.gov/heat-health/about/index.html"
+}
+```
+
+**Errors:**
+- `400` — validation error (`currentConditions` required)
+- `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
+
+---
+
 ## 6. Google OAuth Flow
 
 Authentication is handled **server-side**. The client never holds the Google OAuth credentials; it only redirects the browser to the consent screen and later receives a Sanctum token.
@@ -860,6 +919,7 @@ GET /api/auth/google/redirect?returnTo=<target>
 | Param | Type | Notes |
 |---|---|---|
 | `returnTo` | string \| optional | Where the callback should send the browser (and the issued token) afterwards. Carried through the OAuth `state` parameter. Only the native custom scheme (`GOOGLE_NATIVE_SCHEME`, default `nowcast`) is allowed; any other value falls back to the web origin (prevents open redirects). |
+
 **Success — `302`:** redirects the browser to the Google consent screen (`accounts.google.com/o/oauth2/v2/auth`).
 
 ### 6.2 OAuth callback
@@ -934,6 +994,7 @@ The client should:
 | GET | `/api/posts` | No | — | `200` array of posts + user |
 | GET | `/api/posts/{id}` | No | — | `200` post + user |
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
+| POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?}` | `200` `{summary, healthAdvice, articleUrl}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | GET | `/api/profile` | Yes | — | `200` user / `401` |
