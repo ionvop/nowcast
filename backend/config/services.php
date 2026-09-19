@@ -22,6 +22,11 @@ return [
         'native_scheme' => env('GOOGLE_NATIVE_SCHEME', 'nowcast'),
     ],
 
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'deepseek/deepseek-v4-flash-0731:online'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
