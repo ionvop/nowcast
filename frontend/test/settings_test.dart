@@ -85,4 +85,43 @@ void main() {
       expect(restored.isVibrationEnabled, isFalse);
     });
   });
+
+  group('SettingsController emergency number', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    test('defaults to 911 when no preference is stored', () async {
+      final controller = SettingsController();
+      await controller.init();
+      expect(controller.emergencyNumber, '911');
+    });
+
+    test('setEmergencyNumber persists and init restores the stored value',
+        () async {
+      final controller = SettingsController();
+      await controller.init();
+      await controller.setEmergencyNumber('112');
+      expect(controller.emergencyNumber, '112');
+
+      // A fresh controller restores the persisted preference.
+      final restored = SettingsController();
+      await restored.init();
+      expect(restored.emergencyNumber, '112');
+    });
+
+    test('setEmergencyNumber trims surrounding whitespace', () async {
+      final controller = SettingsController();
+      await controller.init();
+      await controller.setEmergencyNumber('  999  ');
+      expect(controller.emergencyNumber, '999');
+    });
+
+    test('setEmergencyNumber ignores empty values', () async {
+      final controller = SettingsController();
+      await controller.init();
+      await controller.setEmergencyNumber('   ');
+      expect(controller.emergencyNumber, '911');
+    });
+  });
 }
