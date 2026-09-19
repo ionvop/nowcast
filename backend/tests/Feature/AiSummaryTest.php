@@ -46,7 +46,9 @@ test('ai summary returns the model analysis', function (): void {
         return $request->url() === 'https://openrouter.ai/api/v1/chat/completions'
             && $request->hasHeader('Authorization', 'Bearer test-openrouter-key')
             && $body['model'] === 'deepseek/deepseek-v4-flash-0731:online'
-            && $body['response_format'] === ['type' => 'json_object']
+            && $body['response_format']['type'] === 'json_schema'
+            && $body['response_format']['json_schema']['strict'] === true
+            && $body['response_format']['json_schema']['schema']['required'] === ['summary', 'healthAdvice', 'articleUrl']
             && $body['messages'][0]['role'] === 'system'
             && $body['messages'][1]['role'] === 'user'
             && str_contains($body['messages'][1]['content'], 'currentConditions');
