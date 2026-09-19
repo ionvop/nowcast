@@ -225,6 +225,7 @@ class _CurrentWeatherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final condition = weather?.condition;
     final temp = weather?.temperatureC;
+    final heatIndex = weather?.heatIndexC;
 
     return Card(
       child: Padding(
@@ -238,12 +239,27 @@ class _CurrentWeatherCard extends StatelessWidget {
                 retryToken: retryToken,
               ),
             const SizedBox(height: 12),
-            Text(
-              temp != null ? '${temp.toStringAsFixed(1)}°C' : '--°C',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+            Column(
+              children: <Widget>[
+                Text(
+                  temp != null ? '${temp.toStringAsFixed(1)}°C' : '--°C',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                if (heatIndex != null) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Heat ${heatIndex.toStringAsFixed(1)}°',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
+                ],
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -271,7 +287,7 @@ class _ForecastStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 150,
+      height: 170,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: hours.length,
@@ -294,6 +310,7 @@ class _ForecastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final temp = hour.temperatureC;
+    final heatIndex = hour.heatIndexC;
     return Container(
       width: 96,
       decoration: BoxDecoration(
@@ -324,12 +341,24 @@ class _ForecastCard extends StatelessWidget {
               size: 40,
               retryToken: retryToken,
             ),
-          Text(
-            temp != null ? '${temp.toStringAsFixed(0)}°C' : '--°C',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+          Column(
+            children: <Widget>[
+              Text(
+                temp != null ? '${temp.toStringAsFixed(0)}°C' : '--°C',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (heatIndex != null)
+                Text(
+                  'Heat ${heatIndex.toStringAsFixed(0)}°',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
