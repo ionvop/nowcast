@@ -125,7 +125,32 @@ PROMPT,
             'model' => $this->model(),
             'messages' => [$system, $user],
             'temperature' => 0.3,
-            'response_format' => ['type' => 'json_object'],
+            'response_format' => [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => 'weather_summary',
+                    'strict' => true,
+                    'schema' => [
+                        'type' => 'object',
+                        'additionalProperties' => false,
+                        'required' => self::REQUIRED_FIELDS,
+                        'properties' => [
+                            'summary' => [
+                                'type' => 'string',
+                                'description' => 'A short, plain-language paragraph describing the current conditions and what to expect over the next few hours/days.',
+                            ],
+                            'healthAdvice' => [
+                                'type' => 'string',
+                                'description' => 'A short paragraph of actionable health and safety advice based on the conditions.',
+                            ],
+                            'articleUrl' => [
+                                'type' => 'string',
+                                'description' => 'A single real, working URL to a relevant, reputable article about the dominant weather risk.',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 
