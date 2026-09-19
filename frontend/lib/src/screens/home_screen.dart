@@ -7,6 +7,7 @@ import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
+import '../widgets/ai_summary_section.dart';
 import '../widgets/error_view.dart';
 import '../widgets/health_reminder_section.dart';
 import '../widgets/heat_alert_section.dart';
@@ -14,12 +15,12 @@ import '../widgets/loading_overlay.dart';
 import '../widgets/weather_icon.dart';
 import 'settings_screen.dart';
 
-/// Home tab: current weather condition, icon, temperature, and an hourly
-/// forecast strip.
+/// Home tab: current weather condition, icon, temperature, an hourly
+/// forecast strip, and an AI-generated summary of the local conditions.
 ///
 /// Requests device location, then sequentially fetches current weather,
-/// reverse-geocoded city, and the 6h forecast — updating the progress label
-/// each step.
+/// reverse-geocoded city, the 6h forecast, and the daily forecast — updating
+/// the progress label each step.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,12 +32,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final ApiClient _api = ApiClient();
 
   bool _loading = true;
-  String _progressLabel = 'Loading geolocation... (1/4)';
+  String _progressLabel = 'Loading geolocation... (1/5)';
   String? _error;
 
   Weather? _weather;
   String? _city;
   Forecast? _forecast;
+
+  /// The raw current-conditions and forecast payloads, kept alongside the
+  /// typed models so the AI summary can forward the full JSON to the backend
+  /// without dropping fields the typed models do not parse.
+  Map<String, dynamic>? _weatherJson;
+  Map<String, dynamic>? _forecastJson;
+  Map<String, dynamic>? _dailyJson;
 
   /// Incremented on every load/refresh so failed weather icons are retried.
   int _refreshCount = 0;
@@ -56,25 +64,26 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // 1/4 — device location.
+      // 1/5 — device location.
       final position = await getPosition(subject: 'weather');
       if (!mounted) return;
 
-      setState(() => _progressLabel = 'Loading current weather... (2/4)');
+      setState(() => _progressLabel = 'Loading current weather... (2/5)');
 
-      // 2/4 — current weather.
+      // 2/5 — current weather.
       final weatherJson = await _api.post('weather', {
         'latitude': position.latitude,
         'longitude': position.longitude,
       });
       if (!mounted) return;
-      final weather = Weather.fromJson(
-        weatherJson is Map<String, dynamic> ? weatherJson : <String, dynamic>{},
-      );
+      final weatherMap = weatherJson is Map<String, dynamic>
+          ? weatherJson
+          : const <String, dynamic>{};
+      final weather = Weather.fromJson(weatherMap);
 
-      setState(() => _progressLabel = 'Loading your city... (3/4)');
+      setState(() => _progressLabel = 'Loading your city... (3/5)');
 
-      // 3/4 — reverse geocode.
+      // 3/5 — reverse geocode.
       final geocodeJson = await _api.post('geocode', {
         'latitude': position.latitude,
         'longitude': position.longitude,
@@ -82,22 +91,34 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final city = addressFromGeocode(geocodeJson);
 
-      setState(() => _progressLabel = 'Loading forecast... (4/4)');
+      setState(() => _progressLabel = 'Loading forecast... (4/5)');
 
-      // 4/4 — 6h forecast.
-      final forecastJson = await _api.post('forecast', {
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-      });
+      // 4/5 + 5/5 — 6h and daily forecasts, fetched in parallel.
+      final results = await Future.wait<dynamic>([
+        _api.post('forecast', {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+        }),
+        _api.post('forecast/daily', {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+        }),
+      ]);
       if (!mounted) return;
-      final forecast = Forecast.fromJson(
-        forecastJson is Map<String, dynamic>
-            ? forecastJson
-            : <String, dynamic>{},
-      );
+
+      final forecastMap = results[0] is Map<String, dynamic>
+          ? results[0] as Map<String, dynamic>
+          : const <String, dynamic>{};
+      final dailyMap = results[1] is Map<String, dynamic>
+          ? results[1] as Map<String, dynamic>
+          : const <String, dynamic>{};
+      final forecast = Forecast.fromJson(forecastMap);
 
       setState(() {
         _weather = weather;
+        _weatherJson = weatherMap;
+        _forecastJson = forecastMap;
+        _dailyJson = dailyMap;
         _city = city;
         _forecast = forecast;
         _loading = false;
@@ -158,6 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
       weather: _weather,
       city: _city,
       forecast: _forecast,
+      weatherJson: _weatherJson,
+      forecastJson: _forecastJson,
+      dailyJson: _dailyJson,
       retryToken: _refreshCount,
     );
   }
@@ -168,12 +192,21 @@ class _HomeContent extends StatelessWidget {
     required this.weather,
     required this.city,
     required this.forecast,
+    required this.weatherJson,
+    required this.forecastJson,
+    required this.dailyJson,
     required this.retryToken,
   });
 
   final Weather? weather;
   final String? city;
   final Forecast? forecast;
+
+  /// The raw weather payloads forwarded to the AI summary section.
+  final Map<String, dynamic>? weatherJson;
+  final Map<String, dynamic>? forecastJson;
+  final Map<String, dynamic>? dailyJson;
+
   final int retryToken;
 
   @override
@@ -194,6 +227,14 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           _CurrentWeatherCard(weather: weather, retryToken: retryToken),
+          if (weatherJson != null) ...<Widget>[
+            const SizedBox(height: 16),
+            AiSummarySection(
+              currentConditions: weatherJson!,
+              hourlyForecast: forecastJson,
+              dailyForecast: dailyJson,
+            ),
+          ],
           const SizedBox(height: 16),
           HealthReminderSection(weather: weather),
           const SizedBox(height: 16),
