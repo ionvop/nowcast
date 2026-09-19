@@ -171,6 +171,21 @@ class _HeatChart extends StatefulWidget {
 class _HeatChartState extends State<_HeatChart> {
   _Mode _mode = _Mode.hourly;
 
+  /// Index of the hour/day whose tooltip is currently "pinned" (persisted)
+  /// after a tap. `null` when nothing is pinned. The index is shared across
+  /// all series because every series uses the same x ordering (hour/day index).
+  int? _pinnedSpotIndex;
+
+  /// Index of the hour/day currently hovered/held (transient geek that
+  /// follows the finger), taken over by the pin on release. `null` when the
+  /// finger is up.
+  int? _hoverSpotIndex;
+
+  /// Keys to find each chart's render bounds, so the screen-level tap listener
+  /// can tell a tap-on-a-chart from a tap-elsewhere.
+  final GlobalKey _mainChartKey = GlobalKey();
+  final GlobalKey _uvChartKey = GlobalKey();
+
   static final List<_Series> _series = <_Series>[
     _Series('Temperature', const Color(0xFFe53935), (h) => h.temperatureC),
     _Series('Feels Like', const Color(0xFFfb8c00), (h) => h.feelsLikeC),
@@ -200,62 +215,76 @@ class _HeatChartState extends State<_HeatChart> {
     final series = isHourly ? _series : _daySeries;
 
     return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          SegmentedButton<_Mode>(
-            segments: const <ButtonSegment<_Mode>>[
-              ButtonSegment<_Mode>(
-                value: _Mode.hourly,
-                label: Text('Hourly'),
-                icon: Icon(Icons.schedule),
-              ),
-              ButtonSegment<_Mode>(
-                value: _Mode.daily,
-                label: Text('Daily'),
-                icon: Icon(Icons.calendar_today),
-              ),
-            ],
-            selected: <_Mode>{_mode},
-            onSelectionChanged: (selection) {
-              setState(() => _mode = selection.first);
-            },
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
-              child: SizedBox(height: 340, child: LineChart(_data())),
+      child: Listener(
+        onPointerDown: _handleScreenTap,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            SegmentedButton<_Mode>(
+              segments: const <ButtonSegment<_Mode>>[
+                ButtonSegment<_Mode>(
+                  value: _Mode.hourly,
+                  label: Text('Hourly'),
+                  icon: Icon(Icons.schedule),
+                ),
+                ButtonSegment<_Mode>(
+                  value: _Mode.daily,
+                  label: Text('Daily'),
+                  icon: Icon(Icons.calendar_today),
+                ),
+              ],
+              selected: <_Mode>{_mode},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _mode = selection.first;
+                  // A pinned tooltip is tied to the previous view's data;
+                  // clear it when switching between hourly and daily.
+                  _pinnedSpotIndex = null;
+                });
+              },
             ),
-          ),
-          const SizedBox(height: 12),
-          _Legend(series: series),
-          const SizedBox(height: 24),
-          Text(
-            isHourly ? 'Hourly UV Index' : 'Daily UV Index',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
-              child: SizedBox(height: 220, child: LineChart(_uvData())),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 12),
-          _Legend(series: <Object>[_uvSeries]),
-        ],
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                child: SizedBox(
+                  height: 340,
+                  child: LineChart(_data(), key: _mainChartKey),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _Legend(series: series),
+            const SizedBox(height: 24),
+            Text(
+              isHourly ? 'Hourly UV Index' : 'Daily UV Index',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                child: SizedBox(
+                  height: 220,
+                  child: LineChart(_uvData(), key: _uvChartKey),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _Legend(series: <Object>[_uvSeries]),
+          ],
+        ),
       ),
     );
   }
@@ -268,15 +297,101 @@ class _HeatChartState extends State<_HeatChart> {
     return _mode == _Mode.hourly ? _hourlyUvData() : _dailyUvData();
   }
 
+  /// Whether [position] (in global coordinates) lands on either chart.
+  bool _isInAChart(Offset position) {
+    for (final key in <GlobalKey>[_mainChartKey, _uvChartKey]) {
+      final render = key.currentContext?.findRenderObject();
+      if (render is RenderBox) {
+        final box = render;
+        if (box.attached &&
+            box.paintBounds.contains(box.globalToLocal(position))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// A tap that lands outside both charts clears the pinned tooltip. The
+  /// charts' own callback handles taps inside them.
+  void _handleScreenTap(PointerDownEvent event) {
+    if (_isInAChart(event.position)) return;
+    setState(() {
+      _hoverSpotIndex = null;
+      _pinnedSpotIndex = null;
+    });
+  }
+
+  /// Handles all touch events manually (because `handleBuiltInTouches` is
+  /// disabled so the built-in handler can't wipe our persistent tooltip).
+  ///
+  /// - While holding/dragging: show a transient "peek" tooltip.
+  /// - On a tap: pin the tapped spot so its tooltip persists.
+  /// - On release/cancel/exit or a tap on empty space: clear the peek, and
+  ///   clear the pin when the tap landed on empty space.
+  void _handleTouch(FlTouchEvent event, LineTouchResponse? response) {
+    final spots = response?.lineBarSpots;
+    final hasSpots = spots != null && spots.isNotEmpty;
+    final idx = hasSpots ? spots.first.spotIndex : null;
+
+    if (event is FlTapUpEvent) {
+      // A tap pins the spot (or clears it if it landed on empty space).
+      setState(() {
+        _hoverSpotIndex = null;
+        _pinnedSpotIndex = idx;
+      });
+    } else if (event is FlPanDownEvent ||
+        event is FlPanStartEvent ||
+        event is FlPanUpdateEvent ||
+        event is FlTapDownEvent ||
+        event is FlLongPressStart ||
+        event is FlLongPressMoveUpdate) {
+      // Hold/drag: transient peek that follows the finger.
+      setState(() => _hoverSpotIndex = idx);
+    } else {
+      // Lift/cancel/exit: drop the peek but keep any pinned tooltip.
+      setState(() => _hoverSpotIndex = null);
+    }
+  }
+
+  /// The spot index currently shown (peek takes priority over the pin).
+  int? get _activeSpotIndex => _hoverSpotIndex ?? _pinnedSpotIndex;
+
+  /// The spot indices to highlight on each bar.
+  List<int> _activeIndicators() {
+    final idx = _activeSpotIndex;
+    return idx == null ? const <int>[] : <int>[idx];
+  }
+
+  /// Builds the tooltip for the currently active spot across all [bars].
+  /// Returns an empty list when nothing is active or the active index has no
+  /// valid spot (e.g. a null spot in a series).
+  List<ShowingTooltipIndicators> _activeTooltips(List<LineChartBarData> bars) {
+    final idx = _activeSpotIndex;
+    if (idx == null) return const <ShowingTooltipIndicators>[];
+    final spots = <LineBarSpot>[];
+    for (var barIndex = 0; barIndex < bars.length; barIndex++) {
+      final bar = bars[barIndex];
+      if (idx < 0 || idx >= bar.spots.length) continue;
+      final spot = bar.spots[idx];
+      if (spot.isNull()) continue;
+      spots.add(LineBarSpot(bar, barIndex, spot));
+    }
+    if (spots.isEmpty) return const <ShowingTooltipIndicators>[];
+    return <ShowingTooltipIndicators>[ShowingTooltipIndicators(spots)];
+  }
+
   LineChartData _hourlyData() {
     final hours = widget.hours;
     final indexOf = <double, int>{};
     for (var i = 0; i < hours.length; i++) {
       indexOf[i.toDouble()] = i;
     }
+    final bars = _barData();
 
     return LineChartData(
-      lineBarsData: _barData(),
+      lineBarsData: bars,
+      showingTooltipIndicators: _activeTooltips(bars),
       minX: 0,
       maxX: (hours.length - 1).toDouble(),
       gridData: FlGridData(
@@ -337,6 +452,10 @@ class _HeatChartState extends State<_HeatChart> {
         ),
       ),
       lineTouchData: LineTouchData(
+        handleBuiltInTouches: false,
+        touchCallback: _handleTouch,
+        // Tap anywhere in the chart to select the nearest hour/day column.
+        touchSpotThreshold: double.infinity,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (spot) => const Color(0xCC212121),
           getTooltipItems: _tooltipItems,
@@ -372,9 +491,11 @@ class _HeatChartState extends State<_HeatChart> {
     for (var i = 0; i < days.length; i++) {
       indexOf[i.toDouble()] = i;
     }
+    final bars = _dayBarData();
 
     return LineChartData(
-      lineBarsData: _dayBarData(),
+      lineBarsData: bars,
+      showingTooltipIndicators: _activeTooltips(bars),
       minX: 0,
       maxX: (days.length - 1).toDouble(),
       gridData: FlGridData(
@@ -427,6 +548,9 @@ class _HeatChartState extends State<_HeatChart> {
         ),
       ),
       lineTouchData: LineTouchData(
+        handleBuiltInTouches: false,
+        touchCallback: _handleTouch,
+        touchSpotThreshold: double.infinity,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (spot) => const Color(0xCC212121),
           getTooltipItems: _dayTooltipItems,
@@ -462,20 +586,11 @@ class _HeatChartState extends State<_HeatChart> {
     for (var i = 0; i < hours.length; i++) {
       indexOf[i.toDouble()] = i;
     }
+    final bars = _uvBars(_uvSpots());
 
     return LineChartData(
-      lineBarsData: <LineChartBarData>[
-        LineChartBarData(
-          spots: _uvSpots(),
-          color: _uvSeries.color,
-          barWidth: 2,
-          isCurved: true,
-          curveSmoothness: 0.3,
-          isStrokeCapRound: true,
-          isStrokeJoinRound: true,
-          dotData: const FlDotData(show: true),
-        ),
-      ],
+      lineBarsData: bars,
+      showingTooltipIndicators: _activeTooltips(bars),
       minX: 0,
       maxX: (hours.length - 1).toDouble(),
       gridData: FlGridData(
@@ -536,6 +651,9 @@ class _HeatChartState extends State<_HeatChart> {
         ),
       ),
       lineTouchData: LineTouchData(
+        handleBuiltInTouches: false,
+        touchCallback: _handleTouch,
+        touchSpotThreshold: double.infinity,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (spot) => const Color(0xCC212121),
           getTooltipItems: _uvTooltipItems,
@@ -571,20 +689,11 @@ class _HeatChartState extends State<_HeatChart> {
     for (var i = 0; i < days.length; i++) {
       indexOf[i.toDouble()] = i;
     }
+    final bars = _uvBars(_dayUvSpots());
 
     return LineChartData(
-      lineBarsData: <LineChartBarData>[
-        LineChartBarData(
-          spots: _dayUvSpots(),
-          color: _uvSeries.color,
-          barWidth: 2,
-          isCurved: true,
-          curveSmoothness: 0.3,
-          isStrokeCapRound: true,
-          isStrokeJoinRound: true,
-          dotData: const FlDotData(show: true),
-        ),
-      ],
+      lineBarsData: bars,
+      showingTooltipIndicators: _activeTooltips(bars),
       minX: 0,
       maxX: (days.length - 1).toDouble(),
       gridData: FlGridData(
@@ -637,6 +746,9 @@ class _HeatChartState extends State<_HeatChart> {
         ),
       ),
       lineTouchData: LineTouchData(
+        handleBuiltInTouches: false,
+        touchCallback: _handleTouch,
+        touchSpotThreshold: double.infinity,
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (spot) => const Color(0xCC212121),
           getTooltipItems: _uvTooltipItems,
@@ -667,6 +779,7 @@ class _HeatChartState extends State<_HeatChart> {
   }
 
   List<LineChartBarData> _barData() {
+    final indicators = _activeIndicators();
     return _series.map((series) {
       return LineChartBarData(
         spots: _spots(series),
@@ -677,11 +790,13 @@ class _HeatChartState extends State<_HeatChart> {
         isStrokeCapRound: true,
         isStrokeJoinRound: true,
         dotData: const FlDotData(show: true),
+        showingIndicators: indicators,
       );
     }).toList();
   }
 
   List<LineChartBarData> _dayBarData() {
+    final indicators = _activeIndicators();
     return _daySeries.map((series) {
       return LineChartBarData(
         spots: _daySpots(series),
@@ -692,8 +807,26 @@ class _HeatChartState extends State<_HeatChart> {
         isStrokeCapRound: true,
         isStrokeJoinRound: true,
         dotData: const FlDotData(show: true),
+        showingIndicators: indicators,
       );
     }).toList();
+  }
+
+  /// Builds the single-UV-series bar list, honoring the pinned indicator.
+  List<LineChartBarData> _uvBars(List<FlSpot> spots) {
+    return <LineChartBarData>[
+      LineChartBarData(
+        spots: spots,
+        color: _uvSeries.color,
+        barWidth: 2,
+        isCurved: true,
+        curveSmoothness: 0.3,
+        isStrokeCapRound: true,
+        isStrokeJoinRound: true,
+        dotData: const FlDotData(show: true),
+        showingIndicators: _activeIndicators(),
+      ),
+    ];
   }
 
   List<FlSpot> _spots(_Series series) {
@@ -782,9 +915,7 @@ class _HeatChartState extends State<_HeatChart> {
     }).toList();
   }
 
-  static List<LineTooltipItem> _uvTooltipItems(
-    List<LineBarSpot> touchedSpots,
-  ) {
+  static List<LineTooltipItem> _uvTooltipItems(List<LineBarSpot> touchedSpots) {
     return touchedSpots.map((spot) {
       final color = spot.bar.color ?? Colors.white;
       return LineTooltipItem(
@@ -845,11 +976,9 @@ class _Legend extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         );
