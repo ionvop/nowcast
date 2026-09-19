@@ -125,6 +125,7 @@ PROMPT,
             'model' => $this->model(),
             'messages' => [$system, $user],
             'temperature' => 0.3,
+            'reasoning_effort' => 'none',
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
