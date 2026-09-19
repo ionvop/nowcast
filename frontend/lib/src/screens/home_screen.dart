@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
@@ -250,6 +251,8 @@ class _HomeContent extends StatelessWidget {
             const SizedBox(height: 8),
             _ForecastStrip(hours: forecast!.hours, retryToken: retryToken),
           ],
+          const SizedBox(height: 24),
+          const _EmergencyButton(),
         ],
       ),
     );
@@ -402,6 +405,83 @@ class _ForecastCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A prominent card at the bottom of the home page that opens the device
+/// dialer pre-filled with the configured emergency number.
+///
+/// Uses a `tel:` URI with [LaunchMode.externalApplication], so the dialer app
+/// opens at the call-confirmation screen and **no call is placed** unless the
+/// user explicitly confirms it.
+class _EmergencyButton extends StatelessWidget {
+  const _EmergencyButton();
+
+  Future<void> _openDialer(BuildContext context) async {
+    final number = settingsController.emergencyNumber;
+    final uri = Uri(scheme: 'tel', path: number);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Could not open dialer.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      color: scheme.errorContainer,
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openDialer(context),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListenableBuilder(
+            listenable: settingsController,
+            builder: (context, _) => Row(
+              children: <Widget>[
+                Icon(
+                  Icons.emergency,
+                  color: scheme.onErrorContainer,
+                  size: 32,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Emergency',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              color: scheme.onErrorContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Open dialer with ${settingsController.emergencyNumber}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onErrorContainer,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: scheme.onErrorContainer,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
