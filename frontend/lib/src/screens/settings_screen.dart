@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/settings_controller.dart';
 import '../theme/app_theme.dart';
@@ -146,6 +147,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               Card(
+                child: _EmergencyNumberCard(),
+              ),
+              const SizedBox(height: 12),
+              Card(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
@@ -197,6 +202,91 @@ class SettingsScreen extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Editable emergency hotline number used by the home page's emergency button.
+///
+/// Keeps its own [TextEditingController] (instead of binding directly to
+/// [settingsController.emergencyNumber]) so the field doesn't jump the cursor
+/// as the controller notifies listeners on every keystroke.
+class _EmergencyNumberCard extends StatefulWidget {
+  @override
+  State<_EmergencyNumberCard> createState() => _EmergencyNumberCardState();
+}
+
+class _EmergencyNumberCardState extends State<_EmergencyNumberCard> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        TextEditingController(text: settingsController.emergencyNumber);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.emergency, color: AppTheme.seed),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Emergency number',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Number dialed by the home page\'s emergency button. '
+                      'No call is placed unless you confirm it.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            keyboardType: TextInputType.phone,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.phone_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              hintText: kDefaultEmergencyNumber,
+            ),
+            onChanged: (value) => settingsController.setEmergencyNumber(value),
+          ),
+        ],
       ),
     );
   }
