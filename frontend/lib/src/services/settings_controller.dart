@@ -10,6 +10,12 @@ const String k24HourKey = '24_hour';
 /// Shared-preferences key for the heat-danger vibration flag.
 const String kVibrationKey = 'vibration';
 
+/// Shared-preferences key for the emergency hotline number.
+const String kEmergencyNumberKey = 'emergency_number';
+
+/// The default emergency hotline number used until the user changes it.
+const String kDefaultEmergencyNumber = '911';
+
 /// Manages app-wide user settings (dark mode, time format, vibration).
 ///
 /// Follows the same singleton [ChangeNotifier] pattern as [AuthController] and
@@ -20,6 +26,7 @@ class SettingsController extends ChangeNotifier {
   bool _darkMode = false;
   bool _is24Hour = false;
   bool _vibration = true;
+  String _emergencyNumber = kDefaultEmergencyNumber;
 
   /// Whether the user has explicitly stored a 24-hour time-format preference.
   ///
@@ -46,6 +53,12 @@ class SettingsController extends ChangeNotifier {
   /// Enabled by default (`true`).
   bool get isVibrationEnabled => _vibration;
 
+  /// The emergency hotline number shown on the home page's emergency button.
+  ///
+  /// Tapping that button opens the dialer pre-filled with this number (no call
+  /// is placed automatically). Defaults to `911` until the user changes it.
+  String get emergencyNumber => _emergencyNumber;
+
   /// Restores the stored settings. Call once at app startup before the first
   /// frame so the correct theme is applied immediately.
   Future<void> init() async {
@@ -56,6 +69,8 @@ class SettingsController extends ChangeNotifier {
     _hasStored24Hour = prefs.containsKey(k24HourKey);
     _is24Hour = prefs.getBool(k24HourKey) ?? false;
     _vibration = prefs.getBool(kVibrationKey) ?? true;
+    _emergencyNumber =
+        prefs.getString(kEmergencyNumberKey) ?? kDefaultEmergencyNumber;
     _initialized = true;
     notifyListeners();
   }
@@ -96,6 +111,19 @@ class SettingsController extends ChangeNotifier {
     _vibration = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kVibrationKey, value);
+    notifyListeners();
+  }
+
+  /// Updates the emergency hotline number and persists the choice.
+  ///
+  /// The number is trimmed; empty values are ignored so the user can never
+  /// leave it blank. Calling with the current value is a no-op.
+  Future<void> setEmergencyNumber(String value) async {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty || trimmed == _emergencyNumber) return;
+    _emergencyNumber = trimmed;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kEmergencyNumberKey, trimmed);
     notifyListeners();
   }
 }
