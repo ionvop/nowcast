@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\HeatLocationController;
 use App\Http\Controllers\PostController;
@@ -25,7 +26,7 @@ Route::middleware('throttle:api')->group(function (): void {
     Route::post('/forecast/daily', [WeatherController::class, 'dailyForecast']);
     Route::post('/geocode', [WeatherController::class, 'geocode']);
     Route::get('/weather/icon', [WeatherController::class, 'icon']);
-
+    Route::post('/ai/summary', [AiSummaryController::class, 'summary']);
     Route::post('/analyze-heat-location', [HeatLocationController::class, 'analyze']);
     Route::post('/heat-locations', [HeatLocationController::class, 'index']);
 
