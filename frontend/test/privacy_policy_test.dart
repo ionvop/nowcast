@@ -50,7 +50,12 @@ void main() {
       MaterialApp(home: const SettingsScreen()),
     );
 
-    // The settings row is present.
+    // The settings row is present (scroll to it, as it sits below the fold).
+    await tester.scrollUntilVisible(
+      find.text('Privacy Policy'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Privacy Policy'), findsOneWidget);
 
     // Tapping the row pushes the privacy policy screen.
