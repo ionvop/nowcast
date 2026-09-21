@@ -100,7 +100,21 @@ Endpoints that accept a coordinate validate:
 
 **Expiry:** posts older than **24 hours** are purged before listing.
 
-### 4.3 HeatLocation
+### 4.3 Comment
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | integer | |
+| `post_id` | integer | FK → posts.id |
+| `user_id` | integer | FK → users.id |
+| `content` | string | Comment body |
+| `created_at` | string (ISO 8601) | |
+| `updated_at` | string (ISO 8601) | |
+| `user` | object | Embedded author: `{ id, name, avatar }` (only when loaded) |
+
+**Expiry:** none — comments persist indefinitely.
+
+### 4.4 HeatLocation
 
 > **DEPRECATED** — This model is superseded by [WeatherLocation](#44-weatherlocation), which stores the entire weather payload instead of only the heat index. It is kept for backward compatibility and will be removed in a future release. New clients should use the weather-location endpoints (§5.8, §5.9).
 
@@ -843,7 +857,131 @@ Returns an empty array (`[]`) when the user exists but has no current posts.
 
 ---
 
-### 5.17 AI Summary
+### 5.17 Comments — List
+
+Returns all comments on a post, newest first, each with its embedded author.
+
+```
+GET /api/posts/{id}/comments
+```
+
+**Auth:** none
+
+**Path parameters:**
+
+| Param | Type | Notes |
+|---|---|---|
+| `id` | integer | Post ID |
+
+**Success — `200`:** array of `Comment` objects with embedded `user`:
+
+```json
+[
+  {
+    "id": 21,
+    "post_id": 10,
+    "user_id": 5,
+    "content": "Stay hydrated out there!",
+    "created_at": "2026-08-12T11:30:00.000000Z",
+    "updated_at": "2026-08-12T11:30:00.000000Z",
+    "user": {
+      "id": 5,
+      "name": "Jane Doe",
+      "avatar": "data:image/jpeg;base64,..."
+    }
+  }
+]
+```
+
+Returns an empty array (`[]`) when the post exists but has no comments.
+
+**Errors:**
+- `404` — `{"message": "Post not found."}`
+
+---
+
+### 5.18 Comments — Create
+
+Creates a new comment on a post for the authenticated user.
+
+```
+POST /api/posts/{id}/comments
+```
+
+**Auth:** required (Bearer token)
+
+**Path parameters:**
+
+| Param | Type | Notes |
+|---|---|---|
+| `id` | integer | Post ID |
+
+**Request body:**
+
+```json
+{
+  "content": "Stay hydrated out there!"
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `content` | string | required |
+
+**Success — `201`:** the created `Comment` with embedded `user`:
+
+```json
+{
+  "id": 21,
+  "post_id": 10,
+  "user_id": 5,
+  "content": "Stay hydrated out there!",
+  "created_at": "2026-08-12T11:30:00.000000Z",
+  "updated_at": "2026-08-12T11:30:00.000000Z",
+  "user": {
+    "id": 5,
+    "name": "Jane Doe",
+    "avatar": "data:image/jpeg;base64,..."
+  }
+}
+```
+
+**Errors:**
+- `400` — validation error
+- `401` — `{"message": "Unauthorized."}`
+- `404` — `{"message": "Post not found."}`
+
+---
+
+### 5.19 Comments — Delete
+
+Deletes a comment owned by the authenticated user.
+
+```
+DELETE /api/comments/{id}
+```
+
+**Auth:** required (Bearer token)
+
+**Path parameters:**
+
+| Param | Type | Notes |
+|---|---|---|
+| `id` | integer | Comment ID |
+
+**Success — `200`:**
+
+```json
+{ "message": "Comment deleted." }
+```
+
+**Errors:**
+- `401` — `{"message": "Unauthorized."}` (unauthenticated, or not the owner)
+- `404` — `{"message": "Comment not found."}`
+
+---
+
+### 5.20 AI Summary
 
 Generates a short AI analysis of the current conditions and forecast payloads,
 a short paragraph of health advice based on the conditions, and a single link to
@@ -993,10 +1131,13 @@ The client should:
 | POST | `/api/weather-locations` | No | `{}` | `200` array of weather locations |
 | GET | `/api/posts` | No | — | `200` array of posts + user |
 | GET | `/api/posts/{id}` | No | — | `200` post + user |
+| GET | `/api/posts/{id}/comments` | No | — | `200` array of comments + user / `404` |
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
 | POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?}` | `200` `{summary, healthAdvice, articleUrl}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
+| POST | `/api/posts/{id}/comments` | Yes | `{content}` | `201` comment + user / `401` / `404` |
+| DELETE | `/api/comments/{id}` | Yes | — | `200` / `401` / `404` |
 | GET | `/api/profile` | Yes | — | `200` user / `401` |
 | POST | `/api/logout` | Yes | — | `200` |
 | GET | `/api/auth/google/redirect` | No | `?returnTo=` | `302` to Google |
