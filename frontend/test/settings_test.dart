@@ -86,6 +86,31 @@ void main() {
     });
   });
 
+  group('SettingsController AI summary', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+    });
+
+    test('AI summary is disabled by default', () async {
+      final controller = SettingsController();
+      await controller.init();
+      expect(controller.isAiSummaryEnabled, isFalse);
+    });
+
+    test('setAiSummaryEnabled persists and init restores the stored value',
+        () async {
+      final controller = SettingsController();
+      await controller.init();
+      await controller.setAiSummaryEnabled(true);
+      expect(controller.isAiSummaryEnabled, isTrue);
+
+      // A fresh controller restores the persisted preference.
+      final restored = SettingsController();
+      await restored.init();
+      expect(restored.isAiSummaryEnabled, isTrue);
+    });
+  });
+
   group('SettingsController emergency number', () {
     setUp(() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
