@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AiSummaryController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\HeatLocationController;
 use App\Http\Controllers\PostController;
@@ -35,6 +36,7 @@ Route::middleware('throttle:api')->group(function (): void {
 
     Route::get('/posts', [PostController::class, 'index']);
     Route::get('/posts/{id}', [PostController::class, 'show']);
+    Route::get('/posts/{id}/comments', [CommentController::class, 'index']);
     Route::get('/users/{id}/posts', [PostController::class, 'userPosts']);
 
     Route::get('/auth/google/redirect', [GoogleOAuthController::class, 'redirect']);
@@ -45,5 +47,7 @@ Route::middleware('throttle:api')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::delete('/posts/{id}', [PostController::class, 'destroy']);
+        Route::post('/posts/{id}/comments', [CommentController::class, 'store']);
+        Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
     });
 });
