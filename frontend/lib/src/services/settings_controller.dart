@@ -10,6 +10,9 @@ const String k24HourKey = '24_hour';
 /// Shared-preferences key for the heat-danger vibration flag.
 const String kVibrationKey = 'vibration';
 
+/// Shared-preferences key for the AI-summary flag.
+const String kAiSummaryKey = 'ai_summary';
+
 /// Shared-preferences key for the emergency hotline number.
 const String kEmergencyNumberKey = 'emergency_number';
 
@@ -26,6 +29,7 @@ class SettingsController extends ChangeNotifier {
   bool _darkMode = false;
   bool _is24Hour = false;
   bool _vibration = true;
+  bool _aiSummary = false;
   String _emergencyNumber = kDefaultEmergencyNumber;
 
   /// Whether the user has explicitly stored a 24-hour time-format preference.
@@ -53,6 +57,12 @@ class SettingsController extends ChangeNotifier {
   /// Enabled by default (`true`).
   bool get isVibrationEnabled => _vibration;
 
+  /// Whether the AI summary card is shown on the home page.
+  ///
+  /// Disabled by default (`false`) so the `POST /api/ai/summary` endpoint is
+  /// only hit by users who explicitly opt in.
+  bool get isAiSummaryEnabled => _aiSummary;
+
   /// The emergency hotline number shown on the home page's emergency button.
   ///
   /// Tapping that button opens the dialer pre-filled with this number (no call
@@ -69,6 +79,7 @@ class SettingsController extends ChangeNotifier {
     _hasStored24Hour = prefs.containsKey(k24HourKey);
     _is24Hour = prefs.getBool(k24HourKey) ?? false;
     _vibration = prefs.getBool(kVibrationKey) ?? true;
+    _aiSummary = prefs.getBool(kAiSummaryKey) ?? false;
     _emergencyNumber =
         prefs.getString(kEmergencyNumberKey) ?? kDefaultEmergencyNumber;
     _initialized = true;
@@ -111,6 +122,15 @@ class SettingsController extends ChangeNotifier {
     _vibration = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kVibrationKey, value);
+    notifyListeners();
+  }
+
+  /// Enables or disables the AI summary card and persists the choice.
+  Future<void> setAiSummaryEnabled(bool value) async {
+    if (value == _aiSummary) return;
+    _aiSummary = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kAiSummaryKey, value);
     notifyListeners();
   }
 
