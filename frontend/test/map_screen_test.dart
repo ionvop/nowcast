@@ -8,9 +8,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:nowcast/src/api/api_client.dart';
+import 'package:nowcast/src/models/user.dart';
 import 'package:nowcast/src/models/weather.dart';
 import 'package:nowcast/src/screens/map_screen.dart';
 import 'package:nowcast/src/widgets/heat_marker.dart';
+import 'package:nowcast/src/widgets/post_marker.dart';
 
 const String _svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
@@ -92,6 +94,35 @@ void main() {
       );
 
       // Rasterized into a bytes-backed bitmap (not the default pin).
+      expect(descriptor, isNot(equals(BitmapDescriptor.defaultMarker)));
+    });
+  });
+
+  group('buildPostMarker', () {
+    test('builds a marker bitmap with an avatar', () async {
+      // A 1x1 red PNG, base64-encoded as a data URI.
+      const String avatar =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==';
+      final user = User(
+        id: 1,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        avatar: avatar,
+      );
+
+      final descriptor = await buildPostMarker(user);
+
+      // Rasterized into a bytes-backed bitmap (not the default pin).
+      expect(descriptor, isNot(equals(BitmapDescriptor.defaultMarker)));
+    });
+
+    test('builds a marker bitmap with the person fallback when no avatar',
+        () async {
+      final user = User(id: 2, name: 'No Avatar', email: 'n@example.com');
+
+      final descriptor = await buildPostMarker(user);
+
+      // Still rasterizes to a bytes-backed bitmap (not the default pin).
       expect(descriptor, isNot(equals(BitmapDescriptor.defaultMarker)));
     });
   });
