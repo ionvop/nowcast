@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/api_client.dart';
+import '../models/post.dart';
 import '../models/weather.dart';
 import '../models/weather_location.dart';
 import '../services/heat_danger_cooldown.dart';
@@ -15,9 +16,13 @@ import '../utils/heat_color.dart';
 import '../utils/heat_danger.dart';
 import '../utils/flood_danger.dart';
 import '../utils/map_focus.dart';
+import '../utils/time_ago.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
 import '../widgets/loading_overlay.dart';
+import '../widgets/post_marker.dart';
+import '../widgets/user_avatar.dart';
+import 'post_detail_screen.dart';
 import 'settings_screen.dart';
 
 /// Map tab: an interactive map of crowd-sourced weather readings.
@@ -62,6 +67,9 @@ class _MapScreenState extends State<MapScreen> {
   double? _selectedHeatIndex;
   DateTime? _selectedCreatedAt;
   Weather? _selectedWeather;
+
+  /// The community post whose info card is currently shown, if any.
+  Post? _selectedPost;
 
   /// Whether the current camera movement was triggered by showing the info
   /// card (centering on a marker). When true, [onCameraMoveStarted] must NOT
@@ -124,11 +132,26 @@ class _MapScreenState extends State<MapScreen> {
       final weatherLocations = _parseWeatherLocations(weatherJson);
       final markers = await _buildMarkers(weatherLocations);
 
+      // Community posts with a tagged location are shown as avatar markers.
+      // Fetched separately and best-effort: a failure here must not break the
+      // weather map, so it is caught and the map proceeds without post markers.
+      List<Post> posts = const <Post>[];
+      try {
+        final postsJson = await _api.get('posts');
+        if (!mounted) return;
+        posts = _parsePosts(postsJson);
+      } on Exception {
+        // Leave posts empty; the map still renders weather markers.
+      }
+
+      final postMarkers = await _buildPostMarkers(posts);
+
       setState(() {
         _center = LatLng(position.latitude, position.longitude);
         _markers
           ..clear()
-          ..addAll(markers);
+          ..addAll(markers)
+          ..addAll(postMarkers);
         _loading = false;
       });
 
@@ -155,6 +178,41 @@ class _MapScreenState extends State<MapScreen> {
         .whereType<Map<String, dynamic>>()
         .map(WeatherLocation.fromJson)
         .toList();
+  }
+
+  List<Post> _parsePosts(dynamic json) {
+    if (json is! List) return const <Post>[];
+    return json
+        .whereType<Map<String, dynamic>>()
+        .map(Post.fromJson)
+        .toList();
+  }
+
+  /// Builds avatar markers for community posts that have a tagged location.
+  Future<Set<Marker>> _buildPostMarkers(List<Post> posts) async {
+    final markers = <Marker>{};
+    for (final post in posts) {
+      final lat = post.latitude;
+      final lng = post.longitude;
+      if (lat == null || lng == null) continue;
+      final icon = await buildPostMarker(post.user);
+      markers.add(_postMarkerFor(post, lat, lng, icon));
+    }
+    return markers;
+  }
+
+  Marker _postMarkerFor(Post post, double latitude, double longitude,
+      BitmapDescriptor icon) {
+    final id = MarkerId('post_${post.id ?? '$latitude,$longitude'}');
+    return Marker(
+      markerId: id,
+      position: LatLng(latitude, longitude),
+      icon: icon,
+      // Consume taps so the native (tiny, truncating) info window never
+      // appears; we render our own custom info card instead.
+      consumeTapEvents: true,
+      onTap: () => _showPostCard(post),
+    );
   }
 
   Future<Set<Marker>> _buildMarkers(List<WeatherLocation> locations) async {
@@ -260,6 +318,28 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  /// Shows the custom info card for a community post marker at [position].
+  ///
+  /// Centers the map on the marker and pins the card to the bottom of the map,
+  /// mirroring [_showInfoCard].
+  void _showPostCard(Post post) {
+    final lat = post.latitude;
+    final lng = post.longitude;
+    if (lat == null || lng == null) return;
+    final position = LatLng(lat, lng);
+
+    setState(() {
+      _selectedPosition = position;
+      _selectedPost = post;
+    });
+
+    final controller = _mapController;
+    if (controller != null) {
+      _keepCardOpen = true;
+      controller.animateCamera(CameraUpdate.newLatLng(position));
+    }
+  }
+
   /// Closes the custom info card, if shown.
   void _closeInfoCard() {
     if (_selectedPosition == null) return;
@@ -268,6 +348,7 @@ class _MapScreenState extends State<MapScreen> {
       _selectedHeatIndex = null;
       _selectedCreatedAt = null;
       _selectedWeather = null;
+      _selectedPost = null;
     });
   }
 
@@ -666,6 +747,26 @@ class _MapScreenState extends State<MapScreen> {
 
   /// Builds the custom info card pinned to the bottom of the map.
   Widget _buildInfoCard() {
+    final post = _selectedPost;
+    if (post != null) {
+      return Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: _PostInfoCard(
+              post: post,
+              onClose: _closeInfoCard,
+              onOpen: _openPostDetail,
+            ),
+          ),
+        ),
+      );
+    }
+
     final heatIndex = _selectedHeatIndex;
     final createdAt = _selectedCreatedAt;
     final weather = _selectedWeather;
@@ -685,6 +786,19 @@ class _MapScreenState extends State<MapScreen> {
             onClose: _closeInfoCard,
           ),
         ),
+      ),
+    );
+  }
+
+  /// Opens the post detail screen for the currently selected post, then closes
+  /// the info card.
+  void _openPostDetail() {
+    final post = _selectedPost;
+    if (post == null) return;
+    _closeInfoCard();
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PostDetailScreen(postId: post.id),
       ),
     );
   }
@@ -770,6 +884,91 @@ class _InfoCard extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A custom info card shown over the map for a selected community post.
+///
+/// Shows the author's avatar, name and relative time, plus a preview of the
+/// post content clamped to 2 lines. Tapping the card opens the post detail
+/// screen.
+class _PostInfoCard extends StatelessWidget {
+  const _PostInfoCard({
+    required this.post,
+    required this.onClose,
+    required this.onOpen,
+  });
+
+  final Post post;
+  final VoidCallback onClose;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final user = post.user;
+    final time = post.createdAt;
+
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(12),
+      color: theme.colorScheme.surface,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: InkWell(
+          onTap: onOpen,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    UserAvatar(user: user, radius: 16),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            user.name,
+                            style: theme.textTheme.titleSmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (time != null)
+                            Text(
+                              timeAgo(time),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: onClose,
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close, size: 18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  post.content,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
         ),
       ),
