@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
+import '../utils/post_filter.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
@@ -22,16 +23,29 @@ class CommunityScreen extends StatefulWidget {
 
 class _CommunityScreenState extends State<CommunityScreen> {
   final ApiClient _api = ApiClient();
+  final TextEditingController _searchController = TextEditingController();
 
   bool _loading = true;
   String? _error;
   List<Post> _posts = const <Post>[];
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _load();
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Posts matching the current search query, newest-first.
+  ///
+  /// See [filterPosts] for the matching rules.
+  List<Post> get _filteredPosts => filterPosts(_posts, _query);
 
   Future<void> _load() async {
     setState(() {
@@ -57,10 +71,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   List<Post> _parsePosts(dynamic json) {
     if (json is! List) return const <Post>[];
-    return json
-        .whereType<Map<String, dynamic>>()
-        .map(Post.fromJson)
-        .toList();
+    return json.whereType<Map<String, dynamic>>().map(Post.fromJson).toList();
   }
 
   void _fail(String message) {
@@ -73,9 +84,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   Future<void> _openNewPost() async {
     final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => const NewPostScreen(),
-      ),
+      MaterialPageRoute<bool>(builder: (_) => const NewPostScreen()),
     );
     // Refresh the feed after a post is created.
     if (created == true && mounted) {
@@ -147,25 +156,72 @@ class _CommunityScreenState extends State<CommunityScreen> {
       return const PlaceholderView(
         icon: Icons.forum_outlined,
         title: 'Community Feed',
-        description: 'No posts yet. Signed-in users can share their current '
+        description:
+            'No posts yet. Signed-in users can share their current '
             'conditions with the community.',
       );
     }
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: PostCard(
-              post: post,
-              onTap: () => _openPost(post),
+    final posts = _filteredPosts;
+    if (posts.isEmpty) {
+      return Column(
+        children: <Widget>[
+          _buildSearchField(),
+          const Expanded(
+            child: PlaceholderView(
+              icon: Icons.search,
+              title: 'No matches',
+              description: 'No posts match your search. Try different words.',
             ),
-          );
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: <Widget>[
+        _buildSearchField(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final post = posts[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: PostCard(post: post, onTap: () => _openPost(post)),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search posts…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Clear search',
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+          border: const OutlineInputBorder(),
+        ),
+        onChanged: (value) {
+          setState(() => _query = value);
         },
       ),
     );
