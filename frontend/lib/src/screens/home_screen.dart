@@ -230,15 +230,10 @@ class _HomeContent extends StatelessWidget {
           _CurrentWeatherCard(weather: weather, retryToken: retryToken),
           if (weatherJson != null) ...<Widget>[
             const SizedBox(height: 16),
-            ListenableBuilder(
-              listenable: settingsController,
-              builder: (context, _) => settingsController.isAiSummaryEnabled
-                  ? AiSummarySection(
-                      currentConditions: weatherJson!,
-                      hourlyForecast: forecastJson,
-                      dailyForecast: dailyJson,
-                    )
-                  : const SizedBox.shrink(),
+            AiSummarySection(
+              currentConditions: weatherJson!,
+              hourlyForecast: forecastJson,
+              dailyForecast: dailyJson,
             ),
           ],
           const SizedBox(height: 16),
