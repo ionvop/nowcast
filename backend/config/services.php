@@ -24,7 +24,7 @@ return [
 
     'openrouter' => [
         'api_key' => env('OPENROUTER_API_KEY'),
-        'model' => env('OPENROUTER_MODEL', 'deepseek/deepseek-v4-flash-0731:online'),
+        'model' => env('OPENROUTER_MODEL', 'deepseek/deepseek-v4.1-flash'),
     ],
 
     'postmark' => [
