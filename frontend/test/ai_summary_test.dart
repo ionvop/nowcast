@@ -133,6 +133,30 @@ void main() {
   });
 
   group('AiSummarySection', () {
+    testWidgets('does not request a summary until the button is pressed',
+        (tester) async {
+      var calls = 0;
+      final mock = MockClient((http.Request request) async {
+        calls++;
+        return http.Response('{}', 200);
+      });
+
+      await tester.pumpWidget(
+        _wrap(api: ApiClient(client: mock, baseUrl: 'http://example.com/api')),
+      );
+      await tester.pumpAndSettle();
+
+      // Idle state: the button is shown and no request has been made.
+      expect(find.text('Generate summary'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(calls, 0);
+
+      await tester.tap(find.text('Generate summary'));
+      await tester.pumpAndSettle();
+
+      expect(calls, 1);
+    });
+
     testWidgets('renders summary, advice, and article link on success',
         (tester) async {
       final api = _buildApi(<String, dynamic>{
@@ -143,6 +167,10 @@ void main() {
 
       await tester.pumpWidget(_wrap(api: api));
       expect(find.text('AI summary'), findsOneWidget);
+      expect(find.text('Generate summary'), findsOneWidget);
+
+      await tester.tap(find.text('Generate summary'));
+      await tester.pump();
       // Loading indicator while the request is in flight.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
@@ -157,6 +185,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Recommended reading'), findsOneWidget);
+      expect(find.text('Regenerate'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
@@ -165,6 +194,7 @@ void main() {
       final api = _buildApi(<String, dynamic>{});
 
       await tester.pumpWidget(_wrap(api: api));
+      await tester.tap(find.text('Generate summary'));
       await tester.pumpAndSettle();
 
       expect(
@@ -178,6 +208,7 @@ void main() {
       final api = _buildFailingApi(status: 502);
 
       await tester.pumpWidget(_wrap(api: api));
+      await tester.tap(find.text('Generate summary'));
       await tester.pumpAndSettle();
 
       expect(find.text('Upstream error.'), findsOneWidget);
@@ -210,6 +241,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(api: ApiClient(client: mock, baseUrl: 'http://example.com/api')),
       );
+      await tester.tap(find.text('Generate summary'));
       await tester.pumpAndSettle();
       expect(find.text('Try again'), findsOneWidget);
 
@@ -220,6 +252,39 @@ void main() {
       expect(find.text('Enjoy the day.'), findsOneWidget);
       expect(find.text('Recommended reading'), findsOneWidget);
       expect(find.text('Try again'), findsNothing);
+    });
+
+    testWidgets('regenerate fetches a fresh summary', (tester) async {
+      var calls = 0;
+      final mock = MockClient((http.Request request) async {
+        if (!request.url.path.endsWith('/ai/summary')) {
+          return http.Response('{"message":"Not found."}', 404);
+        }
+        calls++;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'summary': 'Summary #$calls',
+            'healthAdvice': 'Advice #$calls',
+            'articleUrl': 'https://example.com/article',
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      await tester.pumpWidget(
+        _wrap(api: ApiClient(client: mock, baseUrl: 'http://example.com/api')),
+      );
+      await tester.tap(find.text('Generate summary'));
+      await tester.pumpAndSettle();
+      expect(find.text('Summary #1'), findsOneWidget);
+
+      await tester.tap(find.text('Regenerate'));
+      await tester.pumpAndSettle();
+
+      expect(calls, 2);
+      expect(find.text('Summary #2'), findsOneWidget);
+      expect(find.text('Advice #2'), findsOneWidget);
     });
   });
 }
