@@ -1040,6 +1040,87 @@ POST /api/ai/summary
 
 ---
 
+### 5.21 AI Activities
+
+Recommends nearby places and activities that fit the current weather. The model
+uses OpenRouter's `openrouter:web_search` server tool to look up real, nearby
+places, then returns structured suggestions matched to the conditions.
+
+As with §5.20, the client supplies the weather payloads it already fetched (via
+§5.1, §5.2, §5.3) plus the location; the server does **not** call Google again.
+
+```
+POST /api/ai/activities
+```
+
+**Auth:** none
+
+**Request body:**
+
+```json
+{
+  "currentConditions": {
+    "temperature": { "degrees": 18.0, "unit": "CELSIUS" },
+    "weatherCondition": { "description": { "text": "Partly cloudy" }, "type": "CLOUDY" }
+  },
+  "hourlyForecast": {
+    "forecastHours": [ /* ... */ ]
+  },
+  "dailyForecast": {
+    "forecastDays": [ /* ... */ ]
+  },
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "placeName": "San Francisco"
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `currentConditions` | object | required — the raw Google current-conditions payload |
+| `hourlyForecast` | object | optional — the raw Google hourly forecast payload |
+| `dailyForecast` | object | optional — the raw Google daily forecast payload |
+| `latitude` | number | required — between -90 and 90 |
+| `longitude` | number | required — between -180 and 180 |
+| `placeName` | string | optional — a human-readable place name (e.g. from §5.4 geocoding) used to bias the web search |
+
+**Success — `200`:**
+
+```json
+{
+  "suggestions": [
+    {
+      "name": "Golden Gate Park",
+      "category": "outdoor",
+      "description": "A large urban park with gardens and trails.",
+      "reason": "Mild temperatures make a stroll comfortable.",
+      "url": "https://www.goldengatepark.org/"
+    },
+    {
+      "name": "SFMOMA",
+      "category": "cultural",
+      "description": "A modern art museum in downtown San Francisco.",
+      "reason": "Rain is expected, so an indoor activity fits."
+    }
+  ]
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `suggestions` | array | 3–6 entries (max 8) |
+| `suggestions[].name` | string | name of the place or activity |
+| `suggestions[].category` | string | one of `outdoor`, `indoor`, `food`, `cultural`, `sports`, `family`, `other` |
+| `suggestions[].description` | string | one or two sentences describing the place or activity |
+| `suggestions[].reason` | string | why it suits the current weather |
+| `suggestions[].url` | string \| omitted | a real URL found via web search; omitted when the model found none (never fabricated) |
+
+**Errors:**
+- `400` — validation error (`currentConditions`, `latitude`, or `longitude` required)
+- `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
+
+---
+
 ## 6. Google OAuth Flow
 
 Authentication is handled **server-side**. The client never holds the Google OAuth credentials; it only redirects the browser to the consent screen and later receives a Sanctum token.
@@ -1134,6 +1215,7 @@ The client should:
 | GET | `/api/posts/{id}/comments` | No | — | `200` array of comments + user / `404` |
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
 | POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?}` | `200` `{summary, healthAdvice, articleUrl}` |
+| POST | `/api/ai/activities` | No | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?}` | `200` `{suggestions: [...]}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | POST | `/api/posts/{id}/comments` | Yes | `{content}` | `201` comment + user / `401` / `404` |
