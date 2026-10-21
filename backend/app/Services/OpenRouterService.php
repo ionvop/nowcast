@@ -152,6 +152,16 @@ PROMPT,
                     ],
                 ],
             ],
+            'tools' => [
+                [
+                    'type' => 'openrouter:web_search',
+                    'parameters' => [
+                        'engine' => 'parallel',
+                        'mode' => 'turbo',
+                        'max_results' => 10,
+                    ]
+                ]
+            ]
         ];
     }
 
@@ -207,6 +217,6 @@ PROMPT,
      */
     protected function model(): string
     {
-        return (string) config('services.openrouter.model', 'deepseek/deepseek-v4-flash-0731:online');
+        return (string) config('services.openrouter.model', 'deepseek/deepseek-v4.1-flash');
     }
 }
