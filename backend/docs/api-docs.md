@@ -989,7 +989,7 @@ an article recommended by the AI for the user to read.
 
 The client supplies the weather payloads it already fetched (via §5.1, §5.2,
 §5.3) in the request body; the server does **not** call Google again. The payloads
-are sent to an LLM hosted on OpenRouter (model `deepseek/deepseek-v4-flash-0731:online`
+are sent to an LLM hosted on OpenRouter (model `deepseek/deepseek-v4.1-flash`
 by default, overridable with `OPENROUTER_MODEL`) which returns structured JSON.
 
 ```
