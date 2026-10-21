@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -157,6 +158,37 @@ void main() {
       expect(calls, 1);
     });
 
+    testWidgets('shows a loading placeholder while the request is in flight',
+        (tester) async {
+      final completer = Completer<http.Response>();
+      final mock = MockClient((http.Request request) => completer.future);
+
+      await tester.pumpWidget(
+        _wrap(api: ApiClient(client: mock, baseUrl: 'http://example.com/api')),
+      );
+      await tester.tap(find.text('Generate summary'));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Analyzing local conditions…'), findsOneWidget);
+
+      completer.complete(
+        http.Response(
+          jsonEncode(<String, dynamic>{
+            'summary': 'Done.',
+            'healthAdvice': 'All good.',
+            'articleUrl': '',
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Done.'), findsOneWidget);
+    });
+
     testWidgets('renders summary, advice, and article link on success',
         (tester) async {
       final api = _buildApi(<String, dynamic>{
@@ -170,10 +202,6 @@ void main() {
       expect(find.text('Generate summary'), findsOneWidget);
 
       await tester.tap(find.text('Generate summary'));
-      await tester.pump();
-      // Loading indicator while the request is in flight.
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
       await tester.pumpAndSettle();
 
       expect(
