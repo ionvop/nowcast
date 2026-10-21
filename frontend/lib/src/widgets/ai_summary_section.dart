@@ -6,9 +6,11 @@ import '../models/ai_summary.dart';
 
 /// The "AI summary" card on the Home page.
 ///
-/// Sends the current-conditions, hourly-forecast, and (optionally) daily
-/// forecast payloads that the Home page already fetched to the
-/// `POST /api/ai/summary` endpoint, then renders:
+/// Generation is user-initiated: the card starts in an idle state showing a
+/// "Generate summary" button and does not contact the backend until that
+/// button is pressed. When pressed, it sends the current-conditions,
+/// hourly-forecast, and (optionally) daily forecast payloads that the Home
+/// page already fetched to the `POST /api/ai/summary` endpoint, then renders:
 ///
 /// 1. A short paragraph summarizing the analysis.
 /// 2. A short paragraph of health advice based on the conditions.
@@ -45,18 +47,18 @@ class AiSummarySection extends StatefulWidget {
 class _AiSummarySectionState extends State<AiSummarySection> {
   late final ApiClient _api = widget.api ?? ApiClient();
 
-  bool _loading = true;
+  /// Whether the user has pressed "Generate summary" yet.
+  ///
+  /// While `false` the card stays idle and no request is made, so simply
+  /// loading the Home page never hits the `POST /api/ai/summary` endpoint.
+  bool _started = false;
+  bool _loading = false;
   String? _error;
   AiSummary? _summary;
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
   Future<void> _load() async {
     setState(() {
+      _started = true;
       _loading = true;
       _error = null;
     });
@@ -110,7 +112,9 @@ class _AiSummarySectionState extends State<AiSummarySection> {
   @override
   Widget build(BuildContext context) {
     final Widget child;
-    if (_loading) {
+    if (!_started) {
+      child = _AiSummaryIdle(onGenerate: _load);
+    } else if (_loading) {
       child = const _AiSummaryLoading();
     } else if (_error != null) {
       child = _AiSummaryError(message: _error!, onRetry: _load);
@@ -118,6 +122,7 @@ class _AiSummarySectionState extends State<AiSummarySection> {
       child = _AiSummaryContent(
         summary: _summary!,
         onOpenArticle: _openArticle,
+        onRegenerate: _load,
       );
     }
 
@@ -149,6 +154,36 @@ class _AiSummarySectionState extends State<AiSummarySection> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AiSummaryIdle extends StatelessWidget {
+  const _AiSummaryIdle({required this.onGenerate});
+
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Tap to generate an AI summary of the current conditions.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: onGenerate,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('Generate summary'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -212,10 +247,12 @@ class _AiSummaryContent extends StatelessWidget {
   const _AiSummaryContent({
     required this.summary,
     required this.onOpenArticle,
+    required this.onRegenerate,
   });
 
   final AiSummary summary;
   final ValueChanged<String> onOpenArticle;
+  final VoidCallback onRegenerate;
 
   @override
   Widget build(BuildContext context) {
@@ -225,11 +262,25 @@ class _AiSummaryContent extends StatelessWidget {
 
     // Nothing usable returned — treat like an unexpected response.
     if (!hasSummary && !hasAdvice && !hasArticle) {
-      return Text(
-        'The AI summary is unavailable right now.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'The AI summary is unavailable right now.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onRegenerate,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Regenerate'),
             ),
+          ),
+        ],
       );
     }
 
@@ -261,6 +312,15 @@ class _AiSummaryContent extends StatelessWidget {
               label: const Text('Recommended reading'),
             ),
           ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: onRegenerate,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Regenerate'),
+          ),
+        ),
       ],
     );
   }
