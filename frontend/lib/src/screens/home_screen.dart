@@ -11,8 +11,8 @@ import '../utils/geolocation.dart';
 import '../widgets/ai_summary_section.dart';
 import '../widgets/error_view.dart';
 import '../widgets/health_reminder_section.dart';
-import '../widgets/heat_alert_section.dart';
 import '../widgets/loading_overlay.dart';
+import '../widgets/notifications_section.dart';
 import '../widgets/weather_icon.dart';
 import 'settings_screen.dart';
 
@@ -239,7 +239,7 @@ class _HomeContent extends StatelessWidget {
           const SizedBox(height: 16),
           HealthReminderSection(weather: weather),
           const SizedBox(height: 16),
-          const HeatAlertSection(),
+          const NotificationsSection(),
           const SizedBox(height: 16),
           if (forecast != null && forecast!.hours.isNotEmpty) ...<Widget>[
             Text(
