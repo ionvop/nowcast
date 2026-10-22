@@ -4,15 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'heat_alert_service.dart';
 
-/// Manages the heat-alert toggle and danger threshold, and drives the
-/// background notification service.
+/// Manages the persistent-notification toggles (a master switch plus the
+/// heat-alert and health-reminder sub-toggles) and the heat-index danger
+/// threshold, and drives the background notification service.
 ///
 /// Follows the same singleton pattern as [AuthController]: a single
-/// [ChangeNotifier] instance shared app-wide. The `enabled` flag and
-/// [threshold] are persisted with `shared_preferences` so the background
-/// service isolate (which cannot read this object's memory) can pick them up,
-/// and so the service auto-starts on the next app launch while the toggle is
-/// still on.
+/// [ChangeNotifier] instance shared app-wide. The toggles and [threshold] are
+/// persisted with `shared_preferences` so the background service isolate (which
+/// cannot read this object's memory) can pick them up, and so the service
+/// auto-starts on the next app launch while the master toggle is still on.
 class HeatAlertController extends ChangeNotifier {
   /// Whether the current platform can host a native background service.
   ///
@@ -26,14 +26,22 @@ class HeatAlertController extends ChangeNotifier {
   final bool _nativeServiceAvailable;
 
   bool _initialized = false;
-  bool _enabled = false;
+  bool _notificationsEnabled = false;
+  bool _heatAlertEnabled = true;
+  bool _healthReminderEnabled = true;
   double _threshold = kDefaultHeatAlertThreshold;
 
   /// Whether [init] has completed.
   bool get isInitialized => _initialized;
 
-  /// Whether heat alerts are currently enabled.
-  bool get isEnabled => _enabled;
+  /// Whether persistent notifications are enabled (the master toggle).
+  bool get isNotificationsEnabled => _notificationsEnabled;
+
+  /// Whether the heat-alert notification is enabled (a sub-toggle).
+  bool get isHeatAlertEnabled => _heatAlertEnabled;
+
+  /// Whether the health-reminder notification is enabled (a sub-toggle).
+  bool get isHealthReminderEnabled => _healthReminderEnabled;
 
   /// The heat-index danger threshold in degrees Celsius.
   double get threshold => _threshold;
@@ -46,42 +54,82 @@ class HeatAlertController extends ChangeNotifier {
         defaultTargetPlatform == TargetPlatform.iOS;
   }
 
-  /// Restores the stored state and, if the toggle was left on, ensures the
-  /// service keeps running. Call once at app startup.
+  /// Restores the stored state and, if the master toggle was left on, ensures
+  /// the service keeps running. Call once at app startup.
+  ///
+  /// Migrates the legacy single-toggle state: when no master preference has
+  /// been stored yet, the master inherits the old `heat_alert_enabled` value so
+  /// existing users keep their previous behavior.
   Future<void> init() async {
     if (_initialized) return;
 
     final prefs = await SharedPreferences.getInstance();
-    _enabled = prefs.getBool(kHeatAlertEnabledKey) ?? false;
+    final legacyEnabled = prefs.getBool(kHeatAlertEnabledKey);
+    if (prefs.containsKey(kNotificationsEnabledKey)) {
+      _notificationsEnabled = prefs.getBool(kNotificationsEnabledKey) ?? false;
+    } else {
+      _notificationsEnabled = legacyEnabled ?? false;
+      await prefs.setBool(kNotificationsEnabledKey, _notificationsEnabled);
+    }
+    _heatAlertEnabled = legacyEnabled ?? true;
+    _healthReminderEnabled =
+        prefs.getBool(kHealthReminderEnabledKey) ?? true;
     _threshold =
         prefs.getDouble(kHeatAlertThresholdKey) ?? kDefaultHeatAlertThreshold;
     _initialized = true;
 
-    if (_enabled && _nativeServiceAvailable) {
+    if (_notificationsEnabled && _nativeServiceAvailable) {
       await FlutterBackgroundService().startService();
     }
     notifyListeners();
   }
 
-  /// Turns heat alerts on and starts the background service.
-  Future<void> enable() async {
-    _enabled = true;
+  /// Turns persistent notifications on and starts the background service.
+  Future<void> enableNotifications() async {
+    _notificationsEnabled = true;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kHeatAlertEnabledKey, true);
+    await prefs.setBool(kNotificationsEnabledKey, true);
     if (_nativeServiceAvailable) {
       await FlutterBackgroundService().startService();
     }
     notifyListeners();
   }
 
-  /// Turns heat alerts off and stops the background service.
-  Future<void> disable() async {
-    _enabled = false;
+  /// Turns persistent notifications off and stops the background service.
+  Future<void> disableNotifications() async {
+    _notificationsEnabled = false;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kHeatAlertEnabledKey, false);
+    await prefs.setBool(kNotificationsEnabledKey, false);
     if (_nativeServiceAvailable) {
       FlutterBackgroundService().invoke('stopService');
     }
+    notifyListeners();
+  }
+
+  /// Enables or disables the heat-alert notification and persists the choice.
+  ///
+  /// When the master toggle is on, the running service is asked to refresh so
+  /// the change is reflected immediately.
+  Future<void> setHeatAlertEnabled(bool value) async {
+    if (value == _heatAlertEnabled) return;
+    _heatAlertEnabled = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kHeatAlertEnabledKey, value);
+    _refreshService();
+    notifyListeners();
+  }
+
+  /// Enables or disables the health-reminder notification and persists the
+  /// choice.
+  ///
+  /// When the master toggle is on, the running service is asked to refresh so
+  /// the change is reflected immediately.
+  Future<void> setHealthReminderEnabled(bool value) async {
+    if (value == _healthReminderEnabled) return;
+    _healthReminderEnabled = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kHealthReminderEnabledKey, value);
+    _refreshService();
     notifyListeners();
   }
 
@@ -93,6 +141,14 @@ class HeatAlertController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(kHeatAlertThresholdKey, value);
     notifyListeners();
+  }
+
+  /// Asks the running background service to re-run its check immediately so a
+  /// sub-toggle change is reflected without waiting for the next tick.
+  void _refreshService() {
+    if (_nativeServiceAvailable && _notificationsEnabled) {
+      FlutterBackgroundService().invoke('refresh');
+    }
   }
 }
 
