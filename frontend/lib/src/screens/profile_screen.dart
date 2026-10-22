@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
 import '../models/user.dart';
+import '../overlay/activities_bubble_controller.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
@@ -276,6 +277,8 @@ class _ProfileViewState extends State<_ProfileView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _ProfileCard(user: user, onSignOut: _signOut),
+            const SizedBox(height: 16),
+            const _BubbleToggleCard(),
             const SizedBox(height: 24),
             _buildPostsSection(),
           ],
@@ -357,6 +360,63 @@ class _ProfileViewState extends State<_ProfileView> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Card with a toggle for the floating AI activities bubble (Android only).
+///
+/// The bubble is drawn over other apps by a separate overlay engine; the
+/// first activation routes the user to the system "Display over other apps"
+/// settings when the permission has not been granted yet.
+class _BubbleToggleCard extends StatelessWidget {
+  const _BubbleToggleCard();
+
+  Future<void> _toggle(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final shown = await ActivitiesBubbleController.instance.toggle();
+    if (shown) return;
+    // Either the permission was denied or the bubble was just hidden.
+    final granted =
+        await ActivitiesBubbleController.instance.checkPermission();
+    if (!granted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Grant Nowcast "Display over other apps" permission to show the '
+            'floating bubble.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: ActivitiesBubbleController.instance,
+      builder: (context, _) {
+        final active = ActivitiesBubbleController.instance.isActive;
+        return Card(
+          child: ListTile(
+            leading: Icon(
+              Icons.auto_awesome,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text('Floating AI bubble'),
+            subtitle: Text(
+              active
+                  ? 'Showing over other apps. Tap to hide.'
+                  : 'Show a floating bubble with AI activity suggestions '
+                      'over other apps.',
+            ),
+            trailing: Switch(
+              value: active,
+              onChanged: (_) => _toggle(context),
+            ),
+          ),
+        );
+      },
     );
   }
 }
