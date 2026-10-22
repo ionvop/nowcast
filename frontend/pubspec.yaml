@@ -66,6 +66,9 @@ dependencies:
   # Persistent local notifications for the heat-alert status.
   flutter_local_notifications: ^22.3.0
 
+  # Floating bubble drawn over other apps (Android) for the AI activities chat.
+  flutter_overlay_window: ^0.4.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
