@@ -91,7 +91,9 @@ void main() {
 
     test('defaults to disabled with the default threshold', () {
       final controller = HeatAlertController(nativeServiceAvailable: false);
-      expect(controller.isEnabled, isFalse);
+      expect(controller.isNotificationsEnabled, isFalse);
+      expect(controller.isHeatAlertEnabled, isTrue);
+      expect(controller.isHealthReminderEnabled, isTrue);
       expect(controller.threshold, kDefaultHeatAlertThreshold);
       expect(controller.isInitialized, isFalse);
     });
@@ -100,29 +102,59 @@ void main() {
       final controller = makeController();
 
       await controller.setThreshold(35);
-      await controller.enable();
+      await controller.enableNotifications();
 
-      expect(controller.isEnabled, isTrue);
+      expect(controller.isNotificationsEnabled, isTrue);
       expect(controller.threshold, 35);
 
       // A fresh controller (simulating a new app launch) restores the state.
       final restored = makeController();
-      expect(restored.isEnabled, isFalse);
+      expect(restored.isNotificationsEnabled, isFalse);
       await restored.init();
-      expect(restored.isEnabled, isTrue);
+      expect(restored.isNotificationsEnabled, isTrue);
       expect(restored.threshold, 35);
     });
 
-    test('disable turns alerts off and persists it', () async {
+    test('disableNotifications turns notifications off and persists it',
+        () async {
       final controller = makeController();
-      await controller.enable();
-      await controller.disable();
+      await controller.enableNotifications();
+      await controller.disableNotifications();
 
-      expect(controller.isEnabled, isFalse);
+      expect(controller.isNotificationsEnabled, isFalse);
 
       final restored = makeController();
       await restored.init();
-      expect(restored.isEnabled, isFalse);
+      expect(restored.isNotificationsEnabled, isFalse);
+    });
+
+    test('persists sub-toggles and restores them on init', () async {
+      final controller = makeController();
+      await controller.enableNotifications();
+      await controller.setHeatAlertEnabled(false);
+      await controller.setHealthReminderEnabled(false);
+
+      expect(controller.isHeatAlertEnabled, isFalse);
+      expect(controller.isHealthReminderEnabled, isFalse);
+
+      final restored = makeController();
+      await restored.init();
+      expect(restored.isHeatAlertEnabled, isFalse);
+      expect(restored.isHealthReminderEnabled, isFalse);
+    });
+
+    test('migrates the legacy heat-alert toggle to the master toggle',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        kHeatAlertEnabledKey: true,
+      });
+
+      final controller = makeController();
+      await controller.init();
+
+      expect(controller.isNotificationsEnabled, isTrue);
+      expect(controller.isHeatAlertEnabled, isTrue);
+      expect(controller.isHealthReminderEnabled, isTrue);
     });
 
     test('setThreshold does nothing when value is unchanged', () async {
@@ -131,6 +163,18 @@ void main() {
       controller.addListener(() => notified++);
 
       await controller.setThreshold(controller.threshold);
+      expect(notified, 0);
+    });
+
+    test('sub-toggle setters do nothing when value is unchanged', () async {
+      final controller = makeController();
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      await controller.setHeatAlertEnabled(controller.isHeatAlertEnabled);
+      await controller.setHealthReminderEnabled(
+        controller.isHealthReminderEnabled,
+      );
       expect(notified, 0);
     });
   });
