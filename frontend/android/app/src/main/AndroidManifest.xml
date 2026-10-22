@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- "Display over other apps" for the floating AI activities bubble. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <application
         android:label="Nowcast"
         android:name="${applicationName}"
