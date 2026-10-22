@@ -12,8 +12,17 @@ import '../models/weather.dart';
 import '../utils/geolocation.dart';
 import '../widgets/health_reminder_section.dart';
 
-/// Shared_preferences key for whether heat alerts are enabled.
+/// Shared_preferences key for whether persistent notifications are enabled
+/// (the master toggle).
+const String kNotificationsEnabledKey = 'notifications_enabled';
+
+/// Shared_preferences key for whether the heat-alert notification is enabled
+/// (a sub-toggle of [kNotificationsEnabledKey]).
 const String kHeatAlertEnabledKey = 'heat_alert_enabled';
+
+/// Shared_preferences key for whether the health-reminder notification is
+/// enabled (a sub-toggle of [kNotificationsEnabledKey]).
+const String kHealthReminderEnabledKey = 'health_reminder_enabled';
 
 /// Shared_preferences key for the heat-index danger threshold (°C).
 const String kHeatAlertThresholdKey = 'heat_alert_threshold';
@@ -125,8 +134,8 @@ Future<void> configureHeatAlertService() async {
       autoStartOnBoot: false,
       isForegroundMode: true,
       notificationChannelId: kHeatAlertChannelId,
-      initialNotificationTitle: 'Heat alerts',
-      initialNotificationContent: 'Monitoring heat index…',
+      initialNotificationTitle: 'Notifications',
+      initialNotificationContent: 'Monitoring conditions…',
       foregroundServiceNotificationId: kHeatAlertNotificationId,
       foregroundServiceTypes: const [AndroidForegroundType.specialUse],
     ),
@@ -152,6 +161,13 @@ void heatAlertOnStart(ServiceInstance service) async {
     await notifications.cancel(id: kHeatAlertNotificationId);
     await notifications.cancel(id: kHealthReminderNotificationId);
     await service.stopSelf();
+  });
+
+  // Re-run a check immediately when the app changes a notification toggle, so
+  // the persistent notifications reflect the new selection without waiting for
+  // the next scheduled tick.
+  service.on('refresh').listen((_) {
+    unawaited(_heatAlertTick(notifications));
   });
 
   // Run an immediate check, then on the configured interval (15 minutes by
@@ -182,13 +198,17 @@ Future<bool> _heatAlertTick(
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
 
-    final enabled = prefs.getBool(kHeatAlertEnabledKey) ?? false;
-    if (!enabled) {
+    final notificationsEnabled =
+        prefs.getBool(kNotificationsEnabledKey) ?? false;
+    if (!notificationsEnabled) {
       await notifications.cancel(id: kHeatAlertNotificationId);
       await notifications.cancel(id: kHealthReminderNotificationId);
       return false;
     }
 
+    final heatAlertEnabled = prefs.getBool(kHeatAlertEnabledKey) ?? true;
+    final healthReminderEnabled =
+        prefs.getBool(kHealthReminderEnabledKey) ?? true;
     final threshold =
         prefs.getDouble(kHeatAlertThresholdKey) ?? kDefaultHeatAlertThreshold;
 
@@ -196,12 +216,17 @@ Future<bool> _heatAlertTick(
     final position = await _resolvePosition();
     if (position == null) {
       // Location unavailable: keep the service alive but report Safe.
-      await _showStatus(
-        notifications,
-        status: HeatAlertStatus.safe,
-        currentHeatIndexC: null,
-        thresholdC: threshold,
-      );
+      if (heatAlertEnabled) {
+        await _showStatus(
+          notifications,
+          status: HeatAlertStatus.safe,
+          currentHeatIndexC: null,
+          thresholdC: threshold,
+        );
+      } else {
+        await _showMonitoring(notifications);
+      }
+      await notifications.cancel(id: kHealthReminderNotificationId);
       return true;
     }
 
@@ -211,32 +236,42 @@ Future<bool> _heatAlertTick(
     });
     final currentHeatIndexC = _weatherHeatIndex(weatherJson);
 
-    final forecastJson = await api.post('forecast', {
-      'latitude': position.latitude,
-      'longitude': position.longitude,
-    });
-    final forecastHeatIndexes = _forecastHeatIndexes(forecastJson);
+    if (heatAlertEnabled) {
+      final forecastJson = await api.post('forecast', {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      });
+      final forecastHeatIndexes = _forecastHeatIndexes(forecastJson);
 
-    final status = determineHeatAlertStatus(
-      currentHeatIndexC: currentHeatIndexC,
-      forecastHeatIndexesC: forecastHeatIndexes,
-      thresholdC: threshold,
-    );
+      final status = determineHeatAlertStatus(
+        currentHeatIndexC: currentHeatIndexC,
+        forecastHeatIndexesC: forecastHeatIndexes,
+        thresholdC: threshold,
+      );
 
-    await _showStatus(
-      notifications,
-      status: status,
-      currentHeatIndexC: currentHeatIndexC,
-      thresholdC: threshold,
-    );
+      await _showStatus(
+        notifications,
+        status: status,
+        currentHeatIndexC: currentHeatIndexC,
+        thresholdC: threshold,
+      );
+    } else {
+      // The heat-alert sub-toggle is off, but the Android foreground service
+      // still requires a persistent notification while it runs.
+      await _showMonitoring(notifications);
+    }
 
     // Relay the health-reminder card: show a persistent notification only when
     // a real reminder applies, otherwise clear it to avoid nagging.
-    final reminder = determineHealthReminder(Weather.fromJson(weatherJson));
-    if (reminder.isNeutral) {
-      await notifications.cancel(id: kHealthReminderNotificationId);
+    if (healthReminderEnabled) {
+      final reminder = determineHealthReminder(Weather.fromJson(weatherJson));
+      if (reminder.isNeutral) {
+        await notifications.cancel(id: kHealthReminderNotificationId);
+      } else {
+        await _showReminder(notifications, reminder);
+      }
     } else {
-      await _showReminder(notifications, reminder);
+      await notifications.cancel(id: kHealthReminderNotificationId);
     }
     return true;
   } catch (_) {
@@ -286,6 +321,34 @@ Future<void> _showReminder(
       android: AndroidNotificationDetails(
         kHealthReminderChannelId,
         kHealthReminderChannelName,
+        icon: 'ic_notification',
+        importance: Importance.low,
+        priority: Priority.defaultPriority,
+        ongoing: true,
+        onlyAlertOnce: true,
+        showWhen: false,
+      ),
+      iOS: DarwinNotificationDetails(presentAlert: false, presentSound: false),
+    ),
+  );
+}
+
+/// Displays (or updates) the neutral persistent notification shown while the
+/// service runs but the heat-alert sub-toggle is off.
+///
+/// Android requires a foreground service to keep a persistent notification, so
+/// this keeps the service alive without surfacing heat-index details.
+Future<void> _showMonitoring(
+  FlutterLocalNotificationsPlugin notifications,
+) async {
+  await notifications.show(
+    id: kHeatAlertNotificationId,
+    title: 'Notifications',
+    body: 'Monitoring conditions…',
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        kHeatAlertChannelId,
+        kHeatAlertChannelName,
         icon: 'ic_notification',
         importance: Importance.low,
         priority: Priority.defaultPriority,
