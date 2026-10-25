@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -39,13 +41,25 @@ class ActivitySuggestion {
 /// payloads, and the AI activity suggestions (`POST /api/ai/activities`,
 /// API §5.21), then renders them as a chat-style suggestions list with
 /// loading / error / retry states.
+///
+/// The whole load is bounded by [loadTimeout] so a slow or hung request can
+/// never leave the panel stuck on the loading spinner: when the deadline
+/// passes the panel shows the error state with a Retry button.
 class ActivitiesChatPanel extends StatefulWidget {
   const ActivitiesChatPanel({
     super.key,
     required this.onMinimize,
     required this.onClose,
     this.api,
+    this.loadTimeout = defaultLoadTimeout,
   });
+
+  /// How long the whole load (location + weather + forecasts + AI) may take
+  /// before the panel gives up and offers a retry.
+  static const Duration defaultLoadTimeout = Duration(seconds: 30);
+
+  /// The deadline applied to a single load attempt. Injectable for tests.
+  final Duration loadTimeout;
 
   /// Collapses the panel back to the compact bubble.
   final VoidCallback onMinimize;
@@ -68,66 +82,115 @@ class _ActivitiesChatPanelState extends State<ActivitiesChatPanel> {
   String? _placeName;
   List<ActivitySuggestion> _suggestions = const <ActivitySuggestion>[];
 
+  /// Incremented on every load attempt so a stale (timed-out or superseded)
+  /// attempt can never overwrite the state of a newer one.
+  int _requestId = 0;
+
   @override
   void initState() {
     super.initState();
     _load();
   }
 
+  /// Runs one load attempt, bounded by [ActivitiesChatPanel.loadTimeout].
   Future<void> _load() async {
+    final requestId = ++_requestId;
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      // 1 — device location.
-      final position = await getPosition(subject: 'activity suggestions');
-
-      // 2 — current weather payloads (raw Google data, forwarded as-is).
-      final weatherJson = await _api.post('weather', <String, dynamic>{
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-      });
-      final weather = weatherJson is Map<String, dynamic>
-          ? weatherJson
-          : const <String, dynamic>{};
-
-      // 3 — reverse geocode for a human-readable place name (optional).
-      String? placeName;
-      try {
-        final geocodeJson = await _api.post('geocode', <String, dynamic>{
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-        });
-        placeName = addressFromGeocode(geocodeJson);
-      } on Exception {
-        placeName = null; // Non-fatal.
-      }
-
-      // 4 — AI activity suggestions.
-      final activitiesJson = await _api.post('ai/activities', <String, dynamic>{
-        'currentConditions': weather['currentConditions'],
-        'hourlyForecast': ?weather['hourlyForecast'],
-        'dailyForecast': ?weather['dailyForecast'],
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-        'placeName': ?placeName,
-      });
-
-      if (!mounted) return;
-      final suggestions = _parseSuggestions(activitiesJson);
+      final result = await _fetch().timeout(widget.loadTimeout);
+      if (!mounted || requestId != _requestId) return;
       setState(() {
-        _suggestions = suggestions;
-        _placeName = placeName;
+        _suggestions = result.suggestions;
+        _placeName = result.placeName;
         _loading = false;
       });
+    } on TimeoutException {
+      if (requestId != _requestId) return;
+      _fail(
+        'This is taking longer than expected. Please try again.',
+      );
     } on ApiException catch (e) {
+      if (requestId != _requestId) return;
       _fail(e.message);
     } on NetworkException catch (e) {
+      if (requestId != _requestId) return;
       _fail(e.message);
     } on Exception {
+      if (requestId != _requestId) return;
       _fail('Something went wrong while loading suggestions.');
+    }
+  }
+
+  /// Performs the network work for one load attempt.
+  ///
+  /// The location is resolved with [getPositionSilently] because the overlay
+  /// runs in its own isolate, where there is no foreground `Activity` to host
+  /// a permission dialog — the prompting variant can hang indefinitely.
+  Future<_LoadResult> _fetch() async {
+    // 1 — device location (never prompts; bounded internally).
+    final position = await getPositionSilently();
+    if (position == null) {
+      throw const NetworkException(
+        'Could not determine your location. Check that location access is '
+        'enabled and try again.',
+      );
+    }
+
+    final coordinates = <String, dynamic>{
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+    };
+
+    // 2 — current weather. `POST /api/weather` returns the raw Google
+    // current-conditions object at the top level (API §5.1), so the whole map
+    // is forwarded as `currentConditions` — exactly as the AI summary card
+    // does. Reading a `currentConditions` key here would always be null.
+    final weatherJson = await _api.post('weather', coordinates);
+    final weather = weatherJson is Map<String, dynamic>
+        ? weatherJson
+        : const <String, dynamic>{};
+
+    // 3 — forecasts and place name, all optional: a failure in any of them
+    // must not prevent the suggestions from loading.
+    final results = await Future.wait<dynamic>(<Future<dynamic>>[
+      _optional(() => _api.post('forecast', coordinates)),
+      _optional(() => _api.post('forecast/daily', coordinates)),
+      _optional(() => _api.post('geocode', coordinates)),
+    ]);
+
+    final hourly = results[0] is Map<String, dynamic>
+        ? results[0] as Map<String, dynamic>
+        : null;
+    final daily = results[1] is Map<String, dynamic>
+        ? results[1] as Map<String, dynamic>
+        : null;
+    final placeName = addressFromGeocode(results[2]);
+
+    // 4 — AI activity suggestions.
+    final activitiesJson = await _api.post('ai/activities', <String, dynamic>{
+      'currentConditions': weather,
+      'hourlyForecast': ?hourly,
+      'dailyForecast': ?daily,
+      ...coordinates,
+      'placeName': ?placeName,
+    });
+
+    return _LoadResult(
+      suggestions: _parseSuggestions(activitiesJson),
+      placeName: placeName,
+    );
+  }
+
+  /// Runs [request], returning `null` instead of throwing on failure.
+  Future<dynamic> _optional(Future<dynamic> Function() request) async {
+    try {
+      return await request();
+    } on Exception {
+      return null;
     }
   }
 
@@ -265,6 +328,14 @@ class _ActivitiesChatPanelState extends State<ActivitiesChatPanel> {
       },
     );
   }
+}
+
+/// The outcome of one successful load attempt.
+class _LoadResult {
+  const _LoadResult({required this.suggestions, this.placeName});
+
+  final List<ActivitySuggestion> suggestions;
+  final String? placeName;
 }
 
 /// A single suggestion rendered as a chat bubble card.
