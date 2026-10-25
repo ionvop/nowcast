@@ -107,8 +107,11 @@ class OpenRouterService
     protected function completions(array $payload): array
     {
         try {
-            $response = Http::timeout(30)
-                ->retry(2, 100)
+            // Keep the total worst case (timeout x attempts) inside the
+            // client's 30s deadline so the app receives a real error message
+            // instead of timing out on its own.
+            $response = Http::timeout(20)
+                ->retry(1, 200)
                 ->withToken($this->apiKey())
                 ->withHeaders(['Accept' => 'application/json'])
                 ->post(self::COMPLETIONS_URL, $payload);
