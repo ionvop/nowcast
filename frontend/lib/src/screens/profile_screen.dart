@@ -379,20 +379,36 @@ class _BubbleToggleCard extends StatelessWidget {
 
   Future<void> _toggle(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final shown = await ActivitiesBubbleController.instance.toggle();
-    if (shown) return;
-    // Either the permission was denied or the bubble was just hidden.
-    final granted =
-        await ActivitiesBubbleController.instance.checkPermission();
-    if (!granted) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Grant Nowcast "Display over other apps" permission to show the '
-            'floating bubble.',
+    final result = await ActivitiesBubbleController.instance.toggle();
+    switch (result) {
+      case BubbleToggleResult.shown:
+      case BubbleToggleResult.hidden:
+        return;
+      case BubbleToggleResult.permissionDenied:
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Grant Nowcast "Display over other apps" permission to show the '
+              'floating bubble.',
+            ),
           ),
-        ),
-      );
+        );
+      case BubbleToggleResult.failed:
+        // The AOSP permission is granted but the window never appeared. On
+        // MIUI/HyperOS (and some other vendor ROMs) a second, non-standard
+        // permission gates overlay windows and `canDrawOverlays()` does not
+        // report it.
+        messenger.showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 8),
+            content: Text(
+              'The bubble could not be shown. On Xiaomi/HyperOS, also enable '
+              'App info → Other permissions → "Display pop-up windows while '
+              'running in background", and set battery saver to "No '
+              'restrictions".',
+            ),
+          ),
+        );
     }
   }
 
