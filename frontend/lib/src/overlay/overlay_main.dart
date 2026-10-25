@@ -4,14 +4,15 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../theme/app_theme.dart';
 import 'activities_chat_panel.dart';
 
-/// Entry point for the overlay engine (a separate Flutter isolate).
+/// Boots the overlay engine's widget tree (a separate Flutter isolate).
 ///
-/// The plugin discovers this function via the `@pragma("vm:entry-point")`
-/// annotation when the overlay window is shown — no explicit registration in
-/// `main.dart` is needed. The annotation keeps the function alive in AOT
-/// builds.
-@pragma('vm:entry-point')
-void overlayMain() {
+/// This must be called from `overlayMain` in `lib/main.dart`, not directly:
+/// `flutter_overlay_window` resolves the entry point with
+/// `Dart_GetField(Dart_RootLibrary(), "overlayMain")`, so the function has to
+/// be a top-level member of the root library. A function declared here would
+/// not be found and the overlay engine would start with no running isolate —
+/// the service starts, but nothing is ever painted.
+void runOverlayApp() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const _OverlayApp());
 }
