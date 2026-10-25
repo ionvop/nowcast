@@ -35,3 +35,35 @@ Future<Position> getPosition({String subject = 'this data'}) async {
 
   return Geolocator.getCurrentPosition();
 }
+
+/// Resolves the device's current location **without ever prompting** for
+/// permission, returning `null` when it cannot be determined.
+///
+/// This is the variant used by the floating bubble, which runs in the overlay
+/// isolate where there is no foreground `Activity` to host a permission
+/// dialog. It returns `null` when location services are disabled or the
+/// permission has not already been granted, and falls back to the last known
+/// position when a fresh fix times out.
+Future<Position?> getPositionSilently({
+  Duration timeout = const Duration(seconds: 10),
+}) async {
+  try {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      return null;
+    }
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(timeLimit: timeout),
+      );
+    } on Exception {
+      return await Geolocator.getLastKnownPosition();
+    }
+  } on Exception {
+    return null;
+  }
+}
