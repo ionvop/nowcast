@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'src/auth/auth_controller.dart';
+import 'src/overlay/activities_bubble_controller.dart';
 import 'src/services/heat_alert_controller.dart';
 import 'src/services/heat_alert_service.dart';
 import 'src/services/settings_controller.dart';
@@ -19,6 +20,9 @@ Future<void> main() async {
   // Restore the stored theme preference before the first frame so the correct
   // light/dark theme is applied immediately.
   await settingsController.init();
+  // When the user returns from the "Display over other apps" settings page,
+  // show the bubble if the permission was granted in the meantime.
+  AppLifecycleListener(onResume: ActivitiesBubbleController.instance.onAppResumed);
   runApp(const NowcastApp());
 }
 
