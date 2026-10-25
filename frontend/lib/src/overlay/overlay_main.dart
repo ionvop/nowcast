@@ -8,10 +8,10 @@ import 'activities_chat_panel.dart';
 
 /// Entry point for the overlay engine (a separate Flutter isolate).
 ///
-/// Registered in `main.dart` via `FlutterOverlayWindow.overlayListener` /
-/// `FlutterOverlayWindow.isOverlayPermissionGranted` — the plugin invokes
-/// `overlayMain` when the overlay window is shown. Must be annotated with
-/// `@pragma("vm:entry-point")` so the AOT compiler keeps it.
+/// The plugin discovers this function via the `@pragma("vm:entry-point")`
+/// annotation when the overlay window is shown — no explicit registration in
+/// `main.dart` is needed. The annotation keeps the function alive in AOT
+/// builds.
 @pragma('vm:entry-point')
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
