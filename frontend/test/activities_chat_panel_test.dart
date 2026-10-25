@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,18 +10,23 @@ import 'package:http/testing.dart';
 import 'package:nowcast/src/api/api_client.dart';
 import 'package:nowcast/src/overlay/activities_chat_panel.dart';
 
-/// A fake geolocator platform so `getPosition()` works in widget tests.
+/// A fake geolocator platform so `getPositionSilently()` works in widget tests.
 class FakeGeolocator extends GeolocatorPlatform {
+  FakeGeolocator({this.permission = LocationPermission.whileInUse});
+
+  /// The permission reported by [checkPermission]. Set to
+  /// [LocationPermission.denied] to simulate a location that cannot be
+  /// resolved without prompting.
+  final LocationPermission permission;
+
   @override
   Future<bool> isLocationServiceEnabled() async => true;
 
   @override
-  Future<LocationPermission> checkPermission() async =>
-      LocationPermission.whileInUse;
+  Future<LocationPermission> checkPermission() async => permission;
 
   @override
-  Future<LocationPermission> requestPermission() async =>
-      LocationPermission.whileInUse;
+  Future<LocationPermission> requestPermission() async => permission;
 
   @override
   Future<Position> getCurrentPosition({LocationSettings? locationSettings}) {
@@ -73,7 +79,30 @@ Map<String, dynamic> _suggestionsJson() {
   };
 }
 
-/// Mock client that serves the weather, geocode, and ai/activities endpoints.
+/// The raw hourly forecast payload (API §5.2).
+Map<String, dynamic> _hourlyJson() {
+  return <String, dynamic>{
+    'forecastHours': <Map<String, dynamic>>[
+      <String, dynamic>{'interval': <String, dynamic>{'startTime': 'now'}},
+    ],
+  };
+}
+
+/// The raw daily forecast payload (API §5.3).
+Map<String, dynamic> _dailyJson() {
+  return <String, dynamic>{
+    'forecastDays': <Map<String, dynamic>>[
+      <String, dynamic>{'displayDate': <String, dynamic>{'year': 2026}},
+    ],
+  };
+}
+
+/// Mock client that serves the weather, forecast, geocode, and ai/activities
+/// endpoints.
+///
+/// `/weather` returns the **raw Google current-conditions object** at the top
+/// level, exactly like the real API (§5.1). Returning a `currentConditions`
+/// wrapper here would hide the payload-shape bug this suite guards against.
 http.Client _mockClient({
   required Map<String, dynamic> activitiesJson,
   void Function(Map<String, dynamic> body)? onActivities,
@@ -82,11 +111,21 @@ http.Client _mockClient({
     final path = request.url.path;
     if (path.endsWith('/weather')) {
       return http.Response(
-        jsonEncode(<String, dynamic>{
-          'currentConditions': _conditionsJson(),
-          'hourlyForecast': <String, dynamic>{'forecastHours': <dynamic>[]},
-          'dailyForecast': <String, dynamic>{'forecastDays': <dynamic>[]},
-        }),
+        jsonEncode(_conditionsJson()),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    }
+    if (path.endsWith('/forecast/daily')) {
+      return http.Response(
+        jsonEncode(_dailyJson()),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    }
+    if (path.endsWith('/forecast')) {
+      return http.Response(
+        jsonEncode(_hourlyJson()),
         200,
         headers: <String, String>{'content-type': 'application/json'},
       );
@@ -118,13 +157,14 @@ http.Client _mockClient({
 ApiClient _api(http.Client client) =>
     ApiClient(client: client, baseUrl: 'http://example.com/api');
 
-Widget _wrap(ApiClient api) {
+Widget _wrap(ApiClient api, {Duration? loadTimeout}) {
   return MaterialApp(
     home: Scaffold(
       body: ActivitiesChatPanel(
         onMinimize: () {},
         onClose: () {},
         api: api,
+        loadTimeout: loadTimeout ?? ActivitiesChatPanel.defaultLoadTimeout,
       ),
     ),
   );
@@ -176,7 +216,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(requestBody, isNotNull);
+      // The whole raw /weather payload is forwarded as `currentConditions`
+      // (API §5.1) — not a nested `currentConditions` key, which never exists.
       expect(requestBody!['currentConditions'], _conditionsJson());
+      expect(requestBody!['hourlyForecast'], _hourlyJson());
+      expect(requestBody!['dailyForecast'], _dailyJson());
       expect(requestBody!['latitude'], isNotNull);
       expect(requestBody!['longitude'], isNotNull);
       expect(requestBody!['placeName'], 'San Francisco');
@@ -200,9 +244,7 @@ void main() {
         }
         if (path.endsWith('/weather')) {
           return http.Response(
-            jsonEncode(<String, dynamic>{
-              'currentConditions': _conditionsJson(),
-            }),
+            jsonEncode(_conditionsJson()),
             200,
             headers: <String, String>{'content-type': 'application/json'},
           );
@@ -226,6 +268,133 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No suggestions right now.'), findsOneWidget);
+    });
+
+    testWidgets('times out after the deadline and offers a retry',
+        (tester) async {
+      // A client whose ai/activities call never completes.
+      final hanging = MockClient((http.Request request) async {
+        final path = request.url.path;
+        if (path.endsWith('/ai/activities')) {
+          return Completer<http.Response>().future;
+        }
+        if (path.endsWith('/weather')) {
+          return http.Response(
+            jsonEncode(_conditionsJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"message":"Not found."}', 404);
+      });
+
+      await tester.pumpWidget(
+        _wrap(_api(hanging), loadTimeout: const Duration(seconds: 30)),
+      );
+      await tester.pump();
+
+      // Still loading before the deadline.
+      expect(find.text('Finding things to do near you…'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('This is taking longer than expected. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Finding things to do near you…'), findsNothing);
+    });
+
+    testWidgets('shows a retryable error when location is unavailable',
+        (tester) async {
+      // Permission denied → getPositionSilently() returns null.
+      GeolocatorPlatform.instance =
+          FakeGeolocator(permission: LocationPermission.denied);
+
+      var activitiesCalls = 0;
+      final client = MockClient((http.Request request) async {
+        if (request.url.path.endsWith('/ai/activities')) {
+          activitiesCalls++;
+        }
+        return http.Response('{"message":"Not found."}', 404);
+      });
+
+      await tester.pumpWidget(_wrap(_api(client)));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Could not determine your location'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      // No AI request is attempted without a location.
+      expect(activitiesCalls, 0);
+    });
+
+    testWidgets('retry after a timeout loads the suggestions', (tester) async {
+      var attempts = 0;
+      final flaky = MockClient((http.Request request) async {
+        final path = request.url.path;
+        if (path.endsWith('/ai/activities')) {
+          attempts++;
+          if (attempts == 1) return Completer<http.Response>().future;
+          return http.Response(
+            jsonEncode(_suggestionsJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (path.endsWith('/weather')) {
+          return http.Response(
+            jsonEncode(_conditionsJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (path.endsWith('/forecast/daily')) {
+          return http.Response(
+            jsonEncode(_dailyJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (path.endsWith('/forecast')) {
+          return http.Response(
+            jsonEncode(_hourlyJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (path.endsWith('/geocode')) {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'results': <Map<String, dynamic>>[
+                <String, dynamic>{'formattedAddress': 'San Francisco'},
+              ],
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"message":"Not found."}', 404);
+      });
+
+      await tester.pumpWidget(
+        _wrap(_api(flaky), loadTimeout: const Duration(seconds: 30)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Golden Gate Park'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
     });
   });
 }
