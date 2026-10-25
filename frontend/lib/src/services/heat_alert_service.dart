@@ -7,10 +7,21 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api_client.dart';
+import '../config/refresh_intervals.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
 import '../utils/geolocation.dart';
 import '../widgets/health_reminder_section.dart';
+
+// Re-exported so existing importers (and tests) keep resolving the interval
+// constants from this library.
+export '../config/refresh_intervals.dart'
+    show
+        kBubbleRefreshInterval,
+        kBubbleTestRefreshInterval,
+        kHeatAlertCheckInterval,
+        kTestHeatAlertCheckInterval,
+        kUseTestInterval;
 
 /// Shared_preferences key for whether persistent notifications are enabled
 /// (the master toggle).
@@ -29,21 +40,6 @@ const String kHeatAlertThresholdKey = 'heat_alert_threshold';
 
 /// The default heat-index threshold (°C) used before the user changes it.
 const double kDefaultHeatAlertThreshold = 32.0;
-
-/// How often the background service re-checks the heat index and refreshes
-/// the persistent notification.
-const Duration kHeatAlertCheckInterval = Duration(minutes: 15);
-
-/// The faster check interval used when the app is launched with
-/// `--dart-define=TEST_INTERVAL=true`, so the persistent notifications refresh
-/// quickly for testing.
-const Duration kTestHeatAlertCheckInterval = Duration(seconds: 15);
-
-/// Whether the app was launched with `--dart-define=TEST_INTERVAL=true`.
-///
-/// When true the background service uses [kTestHeatAlertCheckInterval]
-/// instead of [kHeatAlertCheckInterval].
-const bool kUseTestInterval = bool.fromEnvironment('TEST_INTERVAL');
 
 /// Notification channel used by the heat-alert service.
 const String kHeatAlertChannelId = 'heat_alerts';
@@ -305,8 +301,7 @@ Future<dynamic> _resolvePosition() async {
 
 /// The check interval for the background service: the fast test interval when
 /// launched with `TEST_INTERVAL=true`, otherwise the production interval.
-Duration get _checkInterval =>
-    kUseTestInterval ? kTestHeatAlertCheckInterval : kHeatAlertCheckInterval;
+Duration get _checkInterval => heatAlertCheckInterval;
 
 /// Displays (or updates) the persistent health-reminder notification.
 Future<void> _showReminder(
