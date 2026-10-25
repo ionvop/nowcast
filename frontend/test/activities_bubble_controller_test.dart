@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Size;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +20,19 @@ class FakeBubblePlatform extends ActivitiesBubblePlatform {
   int closeOverlayCalls = 0;
   bool showOverlayThrows = false;
 
+  /// Whether the overlay service reports itself as running. Mirrors the
+  /// plugin's `isOverlayActive` flag.
+  bool overlayActive = false;
+
+  /// When false, `showOverlay()` succeeds but the service never starts — the
+  /// MIUI/HyperOS failure mode.
+  bool showOverlayStartsService = true;
+
+  /// When true, `closeOverlay()` never completes (the 0.4.5 plugin bug).
+  bool closeOverlayHangs = false;
+
+  Size screenSize = const Size(400, 800);
+
   /// Emits an event as if it came from the overlay engine.
   void emit(dynamic event) => _events.add(event);
 
@@ -36,13 +50,22 @@ class FakeBubblePlatform extends ActivitiesBubblePlatform {
   Future<bool> showOverlay() async {
     if (showOverlayThrows) throw Exception('show failed');
     showOverlayCalls++;
+    overlayActive = showOverlayStartsService;
     return true;
   }
 
   @override
   Future<void> closeOverlay() async {
     closeOverlayCalls++;
+    if (closeOverlayHangs) return Completer<void>().future;
+    overlayActive = false;
   }
+
+  @override
+  Future<bool> isActive() async => overlayActive;
+
+  @override
+  Future<Size> getScreenSize() async => screenSize;
 
   @override
   Stream<dynamic> get overlayListener => _events.stream;
@@ -54,8 +77,8 @@ void main() {
     final controller = ActivitiesBubbleController(platform: platform);
 
     expect(controller.isActive, isFalse);
-    final shown = await controller.toggle();
-    expect(shown, isTrue);
+    final result = await controller.toggle();
+    expect(result, BubbleToggleResult.shown);
     expect(controller.isActive, isTrue);
     expect(platform.showOverlayCalls, 1);
 
@@ -67,8 +90,8 @@ void main() {
     final controller = ActivitiesBubbleController(platform: platform);
 
     await controller.showBubble();
-    final shown = await controller.toggle();
-    expect(shown, isFalse);
+    final result = await controller.toggle();
+    expect(result, BubbleToggleResult.hidden);
     expect(controller.isActive, isFalse);
     expect(platform.closeOverlayCalls, 1);
 
@@ -211,4 +234,82 @@ void main() {
       controller.dispose();
     },
   );
+
+  test(
+    'toggle reports failure when the overlay service never starts',
+    () async {
+      // The MIUI/HyperOS case: the permission is granted and showOverlay()
+      // succeeds, but the window never comes up.
+      final platform = FakeBubblePlatform.withPermission()
+        ..showOverlayStartsService = false;
+      final controller = ActivitiesBubbleController(platform: platform);
+
+      final result = await controller.toggle();
+      expect(result, BubbleToggleResult.failed);
+      expect(controller.isActive, isFalse);
+
+      controller.dispose();
+    },
+  );
+
+  test('toggle reports permissionDenied when permission is missing', () async {
+    final platform = FakeBubblePlatform();
+    final controller = ActivitiesBubbleController(platform: platform);
+
+    final result = await controller.toggle();
+    expect(result, BubbleToggleResult.permissionDenied);
+    expect(controller.isActive, isFalse);
+    expect(platform.showOverlayCalls, 0);
+
+    controller.dispose();
+  });
+
+  test('hideBubble clears state even when closeOverlay hangs', () async {
+    final platform = FakeBubblePlatform.withPermission();
+    final controller = ActivitiesBubbleController(platform: platform);
+
+    await controller.showBubble();
+    expect(controller.isActive, isTrue);
+
+    // Reproduces the 0.4.5 plugin bug where closeOverlay() never completes.
+    platform.closeOverlayHangs = true;
+    await controller.hideBubble();
+
+    expect(controller.isActive, isFalse);
+    expect(platform.closeOverlayCalls, 1);
+
+    controller.dispose();
+  });
+
+  test('toggle can be turned off again after a hung closeOverlay', () async {
+    final platform = FakeBubblePlatform.withPermission();
+    final controller = ActivitiesBubbleController(platform: platform);
+
+    await controller.showBubble();
+    platform.closeOverlayHangs = true;
+
+    expect(await controller.toggle(), BubbleToggleResult.hidden);
+    expect(controller.isActive, isFalse);
+
+    // The toggle must not be stuck: a second tap shows the bubble again.
+    platform.closeOverlayHangs = false;
+    expect(await controller.toggle(), BubbleToggleResult.shown);
+    expect(controller.isActive, isTrue);
+
+    controller.dispose();
+  });
+
+  test('showBubble waits for the service to report itself active', () async {
+    final platform = FakeBubblePlatform.withPermission();
+    final controller = ActivitiesBubbleController(platform: platform);
+
+    expect(platform.overlayActive, isFalse);
+    final shown = await controller.showBubble();
+
+    expect(shown, isTrue);
+    expect(platform.overlayActive, isTrue);
+    expect(controller.isActive, isTrue);
+
+    controller.dispose();
+  });
 }
