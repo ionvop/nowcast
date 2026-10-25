@@ -1,5 +1,3 @@
-import 'dart:ui' show PlatformDispatcher;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
@@ -62,11 +60,12 @@ class _OverlayHomeState extends State<_OverlayHome> {
   Future<void> _expand() async {
     setState(() => _expanded = true);
     // Give the panel room: resize the overlay window to most of the screen.
-    final size = PlatformDispatcher.instance.views.first.physicalSize;
-    final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    // `getScreenSize()` reports dp and works inside the overlay isolate, where
+    // `MediaQuery` and `PlatformDispatcher.instance.views` are unreliable.
+    final size = await FlutterOverlayWindow.getScreenSize();
     await FlutterOverlayWindow.resizeOverlay(
-      (size.width / dpr * 0.92).round(),
-      (size.height / dpr * 0.72).round(),
+      (size.x * 0.92).round(),
+      (size.y * 0.72).round(),
       false,
     );
   }
