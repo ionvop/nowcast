@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -32,9 +33,26 @@ class NetworkException implements Exception {
 /// base-URL adapter ([AppConfig.baseUrl]). All requests send JSON and parse
 /// JSON responses, surfacing user-friendly errors on failure.
 class ApiClient {
-  ApiClient({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
+  ApiClient({
+    http.Client? client,
+    String? baseUrl,
+    this.timeout = defaultTimeout,
+  })  : _client = client ?? http.Client(),
         _baseUrl = baseUrl ?? AppConfig.baseUrl;
+
+  /// How long a single request may take before it is abandoned.
+  ///
+  /// The AI endpoints can be slow (the server itself waits up to 30s on the
+  /// upstream LLM), so this is deliberately generous. Without it a hung socket
+  /// leaves the caller waiting forever.
+  static const Duration defaultTimeout = Duration(seconds: 30);
+
+  /// The message surfaced when a request exceeds [timeout].
+  static const String timeoutMessage =
+      'The request timed out. Check your connection and try again.';
+
+  /// How long a single request may take before it is abandoned.
+  final Duration timeout;
 
   final http.Client _client;
   final String _baseUrl;
@@ -49,7 +67,11 @@ class ApiClient {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: _headers(token: token));
+      response = await _client
+          .get(uri, headers: _headers(token: token))
+          .timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkException(timeoutMessage);
     } on Exception {
       throw const NetworkException(
         'Could not reach the server. Check your connection and try again.',
@@ -73,7 +95,11 @@ class ApiClient {
     }
     final http.Response response;
     try {
-      response = await _client.get(uri, headers: _headers(token: token));
+      response = await _client
+          .get(uri, headers: _headers(token: token))
+          .timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkException(timeoutMessage);
     } on Exception {
       throw const NetworkException(
         'Could not reach the server. Check your connection and try again.',
@@ -98,11 +124,15 @@ class ApiClient {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
-      response = await _client.post(
-        uri,
-        headers: _headers(token: token),
-        body: jsonEncode(body),
-      );
+      response = await _client
+          .post(
+            uri,
+            headers: _headers(token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkException(timeoutMessage);
     } on Exception {
       throw const NetworkException(
         'Could not reach the server. Check your connection and try again.',
@@ -120,7 +150,11 @@ class ApiClient {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
-      response = await _client.delete(uri, headers: _headers(token: token));
+      response = await _client
+          .delete(uri, headers: _headers(token: token))
+          .timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkException(timeoutMessage);
     } on Exception {
       throw const NetworkException(
         'Could not reach the server. Check your connection and try again.',
