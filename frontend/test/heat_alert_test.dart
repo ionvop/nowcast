@@ -221,5 +221,13 @@ void main() {
     test('test interval is 15 seconds', () {
       expect(kTestHeatAlertCheckInterval, const Duration(seconds: 15));
     });
+
+    test('bubble production interval is 15 minutes', () {
+      expect(kBubbleRefreshInterval, const Duration(minutes: 15));
+    });
+
+    test('bubble test interval is 15 seconds', () {
+      expect(kBubbleTestRefreshInterval, const Duration(seconds: 15));
+    });
   });
 }
