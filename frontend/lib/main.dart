@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'src/auth/auth_controller.dart';
 import 'src/overlay/activities_bubble_controller.dart';
+// Imported so the overlay engine's entry point is compiled into the app and
+// kept alive by its `@pragma('vm:entry-point')` annotation. The plugin looks
+// the entry point up by name ("overlayMain") when it spawns the overlay
+// isolate; an unreachable library would be tree-shaken away.
+// ignore: unused_import
+import 'src/overlay/overlay_main.dart' show overlayMain;
 import 'src/services/heat_alert_controller.dart';
 import 'src/services/heat_alert_service.dart';
 import 'src/services/settings_controller.dart';
