@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'src/auth/auth_controller.dart';
 import 'src/overlay/activities_bubble_controller.dart';
-// Imported so the overlay engine's entry point is compiled into the app and
-// kept alive by its `@pragma('vm:entry-point')` annotation. The plugin looks
-// the entry point up by name ("overlayMain") when it spawns the overlay
-// isolate; an unreachable library would be tree-shaken away.
-// ignore: unused_import
-import 'src/overlay/overlay_main.dart' show overlayMain;
+import 'src/overlay/overlay_main.dart' show runOverlayApp;
 import 'src/services/heat_alert_controller.dart';
 import 'src/services/heat_alert_service.dart';
 import 'src/services/settings_controller.dart';
@@ -31,6 +26,20 @@ Future<void> main() async {
   AppLifecycleListener(onResume: ActivitiesBubbleController.instance.onAppResumed);
   runApp(const NowcastApp());
 }
+
+/// Entry point for the floating AI bubble's overlay engine.
+///
+/// `flutter_overlay_window` spawns a second Flutter engine and looks this
+/// function up by name in the **root library** — it passes a null
+/// `dartEntrypointLibrary` to `DartEntrypoint`, so the engine resolves it with
+/// `Dart_GetField(Dart_RootLibrary(), "overlayMain")`. It therefore has to be
+/// declared in this file; declaring it in another library makes the lookup
+/// fail, and the overlay service then runs with no isolate and paints nothing.
+///
+/// The `@pragma('vm:entry-point')` annotation keeps the symbol alive in AOT
+/// builds.
+@pragma('vm:entry-point')
+void overlayMain() => runOverlayApp();
 
 /// Root widget for the Nowcast application.
 class NowcastApp extends StatelessWidget {
