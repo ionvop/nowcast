@@ -3,6 +3,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import '../theme/app_theme.dart';
 import 'activities_chat_panel.dart';
+import 'heat_bubble.dart';
 
 /// Boots the overlay engine's widget tree (a separate Flutter isolate).
 ///
@@ -100,6 +101,10 @@ class _OverlayHomeState extends State<_OverlayHome> {
 }
 
 /// The compact draggable bubble shown over other apps.
+///
+/// The visual is a [HeatBubble], which reflects the current heat index and
+/// weather for the user's location (falling back to the blue AI circle when
+/// no reading is available).
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.onTap});
 
@@ -107,24 +112,6 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppTheme.seed,
-          boxShadow: const <BoxShadow>[
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.auto_awesome, color: Colors.white),
-      ),
-    );
+    return GestureDetector(onTap: onTap, child: const HeatBubble(size: 56));
   }
 }
