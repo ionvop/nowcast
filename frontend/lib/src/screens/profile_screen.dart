@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
@@ -278,8 +280,11 @@ class _ProfileViewState extends State<_ProfileView> {
           children: <Widget>[
             _ProfileCard(user: user, onSignOut: _signOut),
             const SizedBox(height: 16),
-            const _BubbleToggleCard(),
-            const SizedBox(height: 24),
+            // The overlay window plugin is Android-only.
+            if (Platform.isAndroid) ...<Widget>[
+              const _BubbleToggleCard(),
+              const SizedBox(height: 24),
+            ],
             _buildPostsSection(),
           ],
         ),
