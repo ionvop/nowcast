@@ -8,7 +8,7 @@ import '../services/settings_controller.dart';
 import '../utils/format.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
-import '../widgets/ai_summary_section.dart';
+import '../widgets/ai_features_section.dart';
 import '../widgets/error_view.dart';
 import '../widgets/health_reminder_section.dart';
 import '../widgets/loading_overlay.dart';
@@ -230,7 +230,7 @@ class _HomeContent extends StatelessWidget {
           _CurrentWeatherCard(weather: weather, retryToken: retryToken),
           if (weatherJson != null) ...<Widget>[
             const SizedBox(height: 16),
-            AiSummarySection(
+            AiFeaturesSection(
               currentConditions: weatherJson!,
               hourlyForecast: forecastJson,
               dailyForecast: dailyJson,
