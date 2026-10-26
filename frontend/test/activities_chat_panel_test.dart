@@ -157,13 +157,18 @@ http.Client _mockClient({
 ApiClient _api(http.Client client) =>
     ApiClient(client: client, baseUrl: 'http://example.com/api');
 
-Widget _wrap(ApiClient api, {Duration? loadTimeout}) {
+Widget _wrap(
+  ApiClient api, {
+  Duration? loadTimeout,
+  ActivitiesSuggestionsController? controller,
+}) {
   return MaterialApp(
     home: Scaffold(
       body: ActivitiesChatPanel(
         onMinimize: () {},
         onClose: () {},
         api: api,
+        controller: controller,
         loadTimeout: loadTimeout ?? ActivitiesChatPanel.defaultLoadTimeout,
       ),
     ),
@@ -395,6 +400,166 @@ void main() {
 
       expect(find.text('Golden Gate Park'), findsOneWidget);
       expect(find.text('Retry'), findsNothing);
+    });
+
+    testWidgets('does not refetch when the panel is re-expanded',
+        (tester) async {
+      var activitiesCalls = 0;
+      final client = _mockClient(
+        activitiesJson: _suggestionsJson(),
+        onActivities: (_) => activitiesCalls++,
+      );
+      final controller = ActivitiesSuggestionsController(api: _api(client));
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_wrap(_api(client), controller: controller));
+      await tester.pumpAndSettle();
+      expect(activitiesCalls, 1);
+      expect(find.text('Golden Gate Park'), findsOneWidget);
+
+      // Collapse: the overlay host swaps the panel for the bubble, which
+      // destroys the panel's State but keeps the controller.
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pumpAndSettle();
+
+      // Re-expand with the same controller: results are reused, no refetch.
+      await tester.pumpWidget(_wrap(_api(client), controller: controller));
+      await tester.pumpAndSettle();
+
+      expect(activitiesCalls, 1);
+      expect(find.text('Golden Gate Park'), findsOneWidget);
+      expect(find.text('Suggestions near San Francisco'), findsOneWidget);
+    });
+
+    testWidgets('does not refetch while a fetch is still running',
+        (tester) async {
+      var activitiesCalls = 0;
+      final hanging = MockClient((http.Request request) async {
+        final path = request.url.path;
+        if (path.endsWith('/ai/activities')) {
+          activitiesCalls++;
+          return Completer<http.Response>().future;
+        }
+        if (path.endsWith('/weather')) {
+          return http.Response(
+            jsonEncode(_conditionsJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"message":"Not found."}', 404);
+      });
+      final controller = ActivitiesSuggestionsController(api: _api(hanging));
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(_wrap(_api(hanging), controller: controller));
+      await tester.pump();
+      expect(activitiesCalls, 1);
+
+      // Collapse and re-expand while the first attempt is still in flight.
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+      await tester.pumpWidget(_wrap(_api(hanging), controller: controller));
+      await tester.pump();
+
+      expect(activitiesCalls, 1);
+      expect(find.text('Finding things to do near you…'), findsOneWidget);
+
+      // Let the in-flight attempt time out so no timers are left pending.
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('regenerate keeps the old list and then replaces it',
+        (tester) async {
+      var activitiesCalls = 0;
+      final second = Completer<http.Response>();
+      final client = MockClient((http.Request request) async {
+        final path = request.url.path;
+        if (path.endsWith('/ai/activities')) {
+          activitiesCalls++;
+          if (activitiesCalls == 1) {
+            return http.Response(
+              jsonEncode(<String, dynamic>{
+                'suggestions': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'name': 'Golden Gate Park',
+                    'category': 'outdoor',
+                    'description': 'A park.',
+                    'reason': 'Nice weather.',
+                  },
+                ],
+              }),
+              200,
+              headers: <String, String>{'content-type': 'application/json'},
+            );
+          }
+          return second.future;
+        }
+        if (path.endsWith('/weather')) {
+          return http.Response(
+            jsonEncode(_conditionsJson()),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"message":"Not found."}', 404);
+      });
+
+      await tester.pumpWidget(_wrap(_api(client)));
+      await tester.pumpAndSettle();
+      expect(find.text('Golden Gate Park'), findsOneWidget);
+
+      await tester.tap(find.text('Regenerate'));
+      await tester.pump();
+
+      // The previous list stays visible while the new attempt runs.
+      expect(find.text('Golden Gate Park'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('Finding things to do near you…'), findsNothing);
+
+      second.complete(
+        http.Response(
+          jsonEncode(<String, dynamic>{
+            'suggestions': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'name': 'Dolores Park',
+                'category': 'outdoor',
+                'description': 'A park.',
+                'reason': 'Nice weather.',
+              },
+            ],
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(activitiesCalls, 2);
+      expect(find.text('Dolores Park'), findsOneWidget);
+      expect(find.text('Golden Gate Park'), findsNothing);
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    });
+
+    testWidgets('offers regenerate when there are no suggestions',
+        (tester) async {
+      var activitiesCalls = 0;
+      final client = _mockClient(
+        activitiesJson: <String, dynamic>{'suggestions': <dynamic>[]},
+        onActivities: (_) => activitiesCalls++,
+      );
+
+      await tester.pumpWidget(_wrap(_api(client)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No suggestions right now.'), findsOneWidget);
+      expect(find.text('Regenerate'), findsOneWidget);
+
+      await tester.tap(find.text('Regenerate'));
+      await tester.pumpAndSettle();
+
+      expect(activitiesCalls, 2);
     });
   });
 }
