@@ -85,6 +85,13 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Let each screen's content flow behind the nav bar. The bar's top
+      // [AppBottomNav.circleLift] strip is transparent, so without this the
+      // Scaffold would stop the body at the bar's top edge and expose a solid
+      // band of the bar's background color above it. Screens add
+      // [AppBottomNav.bottomInsetOf] to their scrollable's bottom padding so
+      // their last item still clears the bar.
+      extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
