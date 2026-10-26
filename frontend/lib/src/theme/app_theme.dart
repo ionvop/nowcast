@@ -35,28 +35,6 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: surface,
-        indicatorColor: seed.withValues(alpha: 0.18),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) {
-            final selected = states.contains(WidgetState.selected);
-            return TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? seed : const Color(0xFF555555),
-            );
-          },
-        ),
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) {
-            final selected = states.contains(WidgetState.selected);
-            return IconThemeData(
-              color: selected ? seed : const Color(0xFF555555),
-            );
-          },
-        ),
-      ),
       cardTheme: CardThemeData(
         color: surface,
         elevation: 1,
@@ -95,28 +73,6 @@ abstract final class AppTheme {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: darkSurface,
-        indicatorColor: seed.withValues(alpha: 0.24),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) {
-            final selected = states.contains(WidgetState.selected);
-            return TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? seed : Colors.white70,
-            );
-          },
-        ),
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) {
-            final selected = states.contains(WidgetState.selected);
-            return IconThemeData(
-              color: selected ? seed : Colors.white70,
-            );
-          },
-        ),
       ),
       cardTheme: CardThemeData(
         color: darkSurface,
