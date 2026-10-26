@@ -138,6 +138,72 @@ void main() {
     expect(size.height, AppBottomNav.totalHeight);
   });
 
+  testWidgets('only the bar paints; the circle-lift strip is transparent', (
+    tester,
+  ) async {
+    await pumpNav(tester);
+
+    final navTop = tester.getTopLeft(find.byType(AppBottomNav)).dy;
+    final barRect = tester.getRect(find.byKey(const Key('nav-bar')));
+
+    // The bar starts exactly [circleLift] below the top of the nav, leaving
+    // the strip the circle rises into unpainted so page content shows through.
+    expect(
+      barRect.top,
+      moreOrLessEquals(navTop + AppBottomNav.circleLift, epsilon: 0.5),
+    );
+    expect(barRect.height, AppBottomNav.barHeight);
+
+    // Nothing paints a background across the whole nav box.
+    final containers = tester.widgetList<Container>(
+      find.descendant(
+        of: find.byType(AppBottomNav),
+        matching: find.byType(Container),
+      ),
+    );
+    expect(containers.where((c) => c.color != null), isEmpty);
+  });
+
+  testWidgets('bar fills the bottom gesture inset', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.reset);
+
+    await pumpNav(tester);
+
+    final navRect = tester.getRect(find.byType(AppBottomNav));
+    final barRect = tester.getRect(find.byKey(const Key('nav-bar')));
+
+    expect(barRect.bottom, moreOrLessEquals(navRect.bottom, epsilon: 0.5));
+    expect(barRect.height, AppBottomNav.barHeight + 34);
+  });
+
+  testWidgets('bottomInsetOf covers the bar plus the gesture inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.reset);
+
+    late double inset;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            inset = AppBottomNav.bottomInsetOf(context);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(inset, AppBottomNav.totalHeight + 34);
+  });
+
   testWidgets('renders in dark mode', (tester) async {
     await pumpNav(tester, theme: AppTheme.dark());
 
