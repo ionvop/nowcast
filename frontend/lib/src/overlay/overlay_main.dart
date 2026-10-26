@@ -48,6 +48,12 @@ class _OverlayHomeState extends State<_OverlayHome> {
   /// Whether the chat panel is expanded (vs. the compact bubble).
   bool _expanded = false;
 
+  /// Owns the suggestions so they survive collapsing and re-expanding the
+  /// panel. It lives as long as the overlay engine, so closing the overlay
+  /// (the X button) discards the results and the next bubble starts fresh.
+  final ActivitiesSuggestionsController _suggestions =
+      ActivitiesSuggestionsController();
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +62,12 @@ class _OverlayHomeState extends State<_OverlayHome> {
       if (!mounted) return;
       setState(() => _expanded = false);
     });
+  }
+
+  @override
+  void dispose() {
+    _suggestions.dispose();
+    super.dispose();
   }
 
   /// Expands the overlay window to fit the chat panel.
@@ -86,6 +98,7 @@ class _OverlayHomeState extends State<_OverlayHome> {
       type: MaterialType.transparency,
       child: _expanded
           ? ActivitiesChatPanel(
+              controller: _suggestions,
               onMinimize: _collapse,
               onClose: () async {
                 await _collapse();
