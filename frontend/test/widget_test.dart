@@ -5,6 +5,7 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:nowcast/main.dart';
@@ -23,5 +24,15 @@ void main() {
     expect(find.text('Map'), findsOneWidget);
     expect(find.text('Community'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
+  });
+
+  testWidgets('App shell lets content flow behind the bottom nav',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const NowcastApp());
+
+    // The shell's Scaffold is the outermost one; the tab screens nest their
+    // own Scaffolds inside it.
+    final shell = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    expect(shell.extendBody, isTrue);
   });
 }
