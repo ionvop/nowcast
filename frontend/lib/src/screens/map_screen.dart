@@ -9,6 +9,7 @@ import '../models/weather.dart';
 import '../models/weather_location.dart';
 import '../services/heat_danger_cooldown.dart';
 import '../services/settings_controller.dart';
+import '../shell/app_bottom_nav.dart';
 import '../utils/format.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
@@ -718,6 +719,12 @@ class _MapScreenState extends State<MapScreen> {
               markers: _markers,
               myLocationEnabled: true,
               myLocationButtonEnabled: true,
+              // The shell extends the body behind the nav bar, so inset the
+              // map's own controls (my-location button, compass) to keep them
+              // above it.
+              padding: EdgeInsets.only(
+                bottom: AppBottomNav.bottomInsetOf(context),
+              ),
               onMapCreated: (controller) {
                 _mapController = controller;
                 _applyPendingCenter();
@@ -756,7 +763,9 @@ class _MapScreenState extends State<MapScreen> {
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            // The SafeArea already clears the nav bar; the extra bottom margin
+            // keeps the card from crowding it.
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
             child: _PostInfoCard(
               post: post,
               onClose: _closeInfoCard,
@@ -778,7 +787,9 @@ class _MapScreenState extends State<MapScreen> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          // The SafeArea already clears the nav bar; the extra bottom margin
+          // keeps the card from crowding it.
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
           child: _InfoCard(
             heatIndex: heatIndex,
             createdAt: createdAt,
