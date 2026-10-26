@@ -33,9 +33,10 @@ class AppNavDestination {
 ///
 /// The bar reserves [totalHeight] pixels of vertical space, of which the bottom
 /// [barHeight] are the bar itself and the top [circleLift] are the strip the
-/// circle rises into. Because the circle never leaves that reserved strip it
-/// cannot cover screen content, so hosts do not need `extendBody` or extra
-/// bottom padding.
+/// circle rises into. Only the bar itself paints a background; the lift strip
+/// is transparent so page content shows through it. Hosts should therefore set
+/// `Scaffold.extendBody: true` and add [bottomInsetOf] to the bottom padding of
+/// their scrollables so the last item still clears the bar.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -68,6 +69,16 @@ class AppBottomNav extends StatelessWidget {
   /// Total vertical space the bar occupies, including the circle's lift.
   static const double totalHeight = barHeight + circleLift;
 
+  /// The bottom padding a scrollable needs so its last item clears this bar.
+  ///
+  /// Returns [totalHeight] plus the device's bottom gesture inset. Reads
+  /// [MediaQuery.viewPaddingOf] rather than `padding` on purpose: hosts use
+  /// `Scaffold.extendBody`, which already inflates `padding.bottom` by the
+  /// bar's height, so reading `padding` here would double-count it.
+  static double bottomInsetOf(BuildContext context) {
+    return totalHeight + MediaQuery.viewPaddingOf(context).bottom;
+  }
+
   /// Index of the destination rendered as the raised circle.
   int get centerIndex => destinations.length ~/ 2;
 
@@ -89,40 +100,47 @@ class AppBottomNav extends StatelessWidget {
     final outlineColor = theme.colorScheme.outlineVariant;
     final holeColor = theme.scaffoldBackgroundColor;
 
-    return Container(
-      color: barColor,
-      // Fill the gesture inset so the bar reaches the bottom of the screen.
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewPaddingOf(context).bottom,
-      ),
-      child: SizedBox(
-        height: totalHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            // The flat bar, sitting in the bottom [barHeight] pixels.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: barHeight,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: barColor,
-                  border: Border(top: BorderSide(color: outlineColor)),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: isDark ? 0.40 : 0.06,
-                      ),
-                      blurRadius: 12,
-                      offset: const Offset(0, -2),
+    // Fill the gesture inset so the bar reaches the bottom of the screen.
+    final double bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
+    return SizedBox(
+      height: totalHeight + bottomInset,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          // The flat bar, filling the bottom [barHeight] plus the gesture
+          // inset. Its top border lands exactly [circleLift] below the top of
+          // this widget; the strip above it is left transparent so page
+          // content shows through.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: barHeight + bottomInset,
+            child: DecoratedBox(
+              key: const Key('nav-bar'),
+              decoration: BoxDecoration(
+                color: barColor,
+                border: Border(top: BorderSide(color: outlineColor)),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: isDark ? 0.40 : 0.06,
                     ),
-                  ],
-                ),
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
             ),
-            Row(
+          ),
+          // The destinations, bottom-aligned with the bar's top edge.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomInset,
+            height: totalHeight,
+            child: Row(
               children: <Widget>[
                 for (var i = 0; i < destinations.length; i++)
                   Expanded(
@@ -155,8 +173,8 @@ class AppBottomNav extends StatelessWidget {
                   ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
