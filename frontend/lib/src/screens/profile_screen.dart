@@ -1,16 +1,14 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
 import '../models/user.dart';
-import '../overlay/activities_bubble_controller.dart';
 import '../widgets/error_view.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
 import '../widgets/post_card.dart';
+import '../widgets/sign_in_button.dart';
 import '../widgets/user_avatar.dart';
 import 'post_detail_screen.dart';
 import 'settings_screen.dart';
@@ -98,26 +96,7 @@ class _SignInPrompt extends StatelessWidget {
       title: 'Sign In',
       description: 'Sign in with Google to view your profile and take part '
           'in the community.',
-      body: _SignInButton(onPressed: () => _signIn(context)),
-    );
-  }
-}
-
-/// Google sign-in button that opens the consent screen in the browser.
-class _SignInButton extends StatelessWidget {
-  const _SignInButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.login),
-      label: const Text('Sign in with Google'),
-      style: FilledButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
+      body: SignInButton(onPressed: () => _signIn(context)),
     );
   }
 }
@@ -279,12 +258,7 @@ class _ProfileViewState extends State<_ProfileView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             _ProfileCard(user: user, onSignOut: _signOut),
-            const SizedBox(height: 16),
-            // The overlay window plugin is Android-only.
-            if (Platform.isAndroid) ...<Widget>[
-              const _BubbleToggleCard(),
-              const SizedBox(height: 24),
-            ],
+            const SizedBox(height: 24),
             _buildPostsSection(),
           ],
         ),
@@ -365,79 +339,6 @@ class _ProfileViewState extends State<_ProfileView> {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// Card with a toggle for the floating AI activities bubble (Android only).
-///
-/// The bubble is drawn over other apps by a separate overlay engine; the
-/// first activation routes the user to the system "Display over other apps"
-/// settings when the permission has not been granted yet.
-class _BubbleToggleCard extends StatelessWidget {
-  const _BubbleToggleCard();
-
-  Future<void> _toggle(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final result = await ActivitiesBubbleController.instance.toggle();
-    switch (result) {
-      case BubbleToggleResult.shown:
-      case BubbleToggleResult.hidden:
-        return;
-      case BubbleToggleResult.permissionDenied:
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Grant Nowcast "Display over other apps" permission to show the '
-              'floating bubble.',
-            ),
-          ),
-        );
-      case BubbleToggleResult.failed:
-        // The AOSP permission is granted but the window never appeared. On
-        // MIUI/HyperOS (and some other vendor ROMs) a second, non-standard
-        // permission gates overlay windows and `canDrawOverlays()` does not
-        // report it.
-        messenger.showSnackBar(
-          const SnackBar(
-            duration: Duration(seconds: 8),
-            content: Text(
-              'The bubble could not be shown. On Xiaomi/HyperOS, also enable '
-              'App info → Other permissions → "Display pop-up windows while '
-              'running in background", and set battery saver to "No '
-              'restrictions".',
-            ),
-          ),
-        );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ActivitiesBubbleController.instance,
-      builder: (context, _) {
-        final active = ActivitiesBubbleController.instance.isActive;
-        return Card(
-          child: ListTile(
-            leading: Icon(
-              Icons.auto_awesome,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            title: const Text('Floating AI bubble'),
-            subtitle: Text(
-              active
-                  ? 'Showing over other apps. Tap to hide.'
-                  : 'Show a floating bubble with AI activity suggestions '
-                      'over other apps.',
-            ),
-            trailing: Switch(
-              value: active,
-              onChanged: (_) => _toggle(context),
-            ),
-          ),
-        );
-      },
     );
   }
 }
