@@ -30,9 +30,17 @@ const String kTokenPrefsKey = 'auth_token';
 /// is persisted with `shared_preferences` and surfaced to the UI through this
 /// [ChangeNotifier] so screens can react to login/logout.
 class AuthController extends ChangeNotifier {
-  AuthController({String? baseUrl, AppLinks? appLinks})
+  /// Creates a controller.
+  ///
+  /// [initialToken] pre-seeds an authenticated session without touching
+  /// `shared_preferences` or the deep-link stream. It exists so widget tests
+  /// can render signed-in UI without mocking platform plugins; production code
+  /// leaves it null and calls [init] instead.
+  AuthController({String? baseUrl, AppLinks? appLinks, String? initialToken})
       : _api = ApiClient(baseUrl: baseUrl),
-        _appLinks = appLinks ?? AppLinks();
+        _appLinks = appLinks ?? AppLinks(),
+        _token = initialToken,
+        _initialized = initialToken != null;
 
   final ApiClient _api;
   final AppLinks _appLinks;
