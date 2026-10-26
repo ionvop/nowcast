@@ -24,6 +24,14 @@ Future<void> main() async {
   // When the user returns from the "Display over other apps" settings page,
   // show the bubble if the permission was granted in the meantime.
   AppLifecycleListener(onResume: ActivitiesBubbleController.instance.onAppResumed);
+  // The AI features are gated to signed-in users, so a sign-out must also tear
+  // down the floating bubble — otherwise it would keep running for a
+  // logged-out user.
+  authController.addListener(() {
+    if (!authController.isAuthenticated) {
+      ActivitiesBubbleController.instance.hideBubble();
+    }
+  });
   runApp(const NowcastApp());
 }
 
