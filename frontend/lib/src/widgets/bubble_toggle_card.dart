@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../overlay/activities_bubble_controller.dart';
+import 'app_card.dart';
 
 /// Card with a toggle for the floating AI activities bubble (Android only).
 ///
@@ -61,7 +62,7 @@ class BubbleToggleCard extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final active = controller.isActive;
-        return Card(
+        return AppCard(
           child: ListTile(
             leading: Icon(
               Icons.auto_awesome,
