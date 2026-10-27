@@ -33,26 +33,26 @@ class CardStyle {
   /// Drop shadows that lift the card off the background.
   final List<BoxShadow> shadows;
 
-  /// Bevel thickness used by every card. One logical pixel reads as a crisp
-  /// edge without looking like a heavy outline.
-  static const double bevelWidthValue = 1;
+  /// Bevel thickness used by every card. Three logical pixels read as a
+  /// clearly machined edge without looking like a heavy outline.
+  static const double bevelWidthValue = 3;
 
   static const Alignment _begin = Alignment.topLeft;
   static const Alignment _end = Alignment.bottomRight;
 
-  /// Light-mode tokens: a white face fading to a barely-tinted blue, a white
+  /// Light-mode tokens: a white face fading to a tinted blue, a white
   /// highlight on the top-left edge, and a soft two-layer shadow.
   static const CardStyle _light = CardStyle(
     bevelWidth: bevelWidthValue,
     surfaceGradient: LinearGradient(
       begin: _begin,
       end: _end,
-      colors: <Color>[Color(0xFFFFFFFF), Color(0xFFF5F9FF)],
+      colors: <Color>[Color(0xFFFFFFFF), Color(0xFFE4EEFC)],
     ),
     bevelGradient: LinearGradient(
       begin: _begin,
       end: _end,
-      colors: <Color>[Color(0xFFFFFFFF), Color(0xFFD3DFF0)],
+      colors: <Color>[Color(0xFFFFFFFF), Color(0xFFA8C0DE)],
     ),
     shadows: <BoxShadow>[
       BoxShadow(
@@ -69,19 +69,19 @@ class CardStyle {
     ],
   );
 
-  /// Dark-mode tokens: a slightly lighter face fading to near-black, a faint
+  /// Dark-mode tokens: a lighter face fading to near-black, a bright
   /// highlight on the top-left edge, and a deeper shadow.
   static const CardStyle _dark = CardStyle(
     bevelWidth: bevelWidthValue,
     surfaceGradient: LinearGradient(
       begin: _begin,
       end: _end,
-      colors: <Color>[Color(0xFF262626), Color(0xFF1A1A1A)],
+      colors: <Color>[Color(0xFF2E2E2E), Color(0xFF121212)],
     ),
     bevelGradient: LinearGradient(
       begin: _begin,
       end: _end,
-      colors: <Color>[Color(0xFF3C3C3C), Color(0xFF0D0D0D)],
+      colors: <Color>[Color(0xFF4F4F4F), Color(0xFF000000)],
     ),
     shadows: <BoxShadow>[
       BoxShadow(
@@ -174,16 +174,16 @@ class CardStyle {
             begin: _begin,
             end: _end,
             colors: <Color>[
-              Color.lerp(light, Colors.white, isDark ? 0.06 : 0.10)!,
-              Color.lerp(dark, Colors.black, isDark ? 0.10 : 0.06)!,
+              Color.lerp(light, Colors.white, isDark ? 0.10 : 0.16)!,
+              Color.lerp(dark, Colors.black, isDark ? 0.16 : 0.10)!,
             ],
           ),
       bevelGradient: LinearGradient(
         begin: _begin,
         end: _end,
         colors: <Color>[
-          Color.lerp(light, Colors.white, isDark ? 0.18 : 0.55)!,
-          Color.lerp(dark, Colors.black, isDark ? 0.35 : 0.22)!,
+          Color.lerp(light, Colors.white, isDark ? 0.28 : 0.70)!,
+          Color.lerp(dark, Colors.black, isDark ? 0.50 : 0.32)!,
         ],
       ),
     );
