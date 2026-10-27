@@ -18,6 +18,7 @@ import '../utils/heat_danger.dart';
 import '../utils/flood_danger.dart';
 import '../utils/map_focus.dart';
 import '../utils/time_ago.dart';
+import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/heat_marker.dart';
 import '../widgets/loading_overlay.dart';
@@ -838,10 +839,10 @@ class _InfoCard extends StatelessWidget {
     final theme = Theme.of(context);
     final description = weather?.condition.description ?? '';
 
-    return Material(
-      elevation: 6,
-      borderRadius: BorderRadius.circular(12),
-      color: theme.colorScheme.surface,
+    return AppCard(
+      margin: EdgeInsets.zero,
+      borderRadius: 12,
+      elevated: true,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 260),
         child: Padding(
@@ -924,62 +925,59 @@ class _PostInfoCard extends StatelessWidget {
     final user = post.user;
     final time = post.createdAt;
 
-    return Material(
-      elevation: 6,
-      borderRadius: BorderRadius.circular(12),
-      color: theme.colorScheme.surface,
+    return AppCard(
+      margin: EdgeInsets.zero,
+      borderRadius: 12,
+      elevated: true,
+      onTap: onOpen,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
-        child: InkWell(
-          onTap: onOpen,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    UserAvatar(user: user, radius: 16),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  UserAvatar(user: user, radius: 16),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          user.name,
+                          style: theme.textTheme.titleSmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (time != null)
                           Text(
-                            user.name,
-                            style: theme.textTheme.titleSmall,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (time != null)
-                            Text(
-                              timeAgo(time),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                            timeAgo(time),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
-                    InkWell(
-                      onTap: onClose,
-                      child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close, size: 18),
-                      ),
+                  ),
+                  InkWell(
+                    onTap: onClose,
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close, size: 18),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  post.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                post.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
           ),
         ),
       ),
