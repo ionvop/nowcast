@@ -6,6 +6,7 @@ import '../models/post.dart';
 import '../models/user.dart';
 import '../shell/app_bottom_nav.dart';
 import '../widgets/error_view.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
 import '../widgets/post_card.dart';
@@ -267,7 +268,7 @@ class _ProfileViewState extends State<_ProfileView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _ProfileCard(user: user, onSignOut: _signOut),
+            FadeSlideIn(child: _ProfileCard(user: user, onSignOut: _signOut)),
             const SizedBox(height: 24),
             _buildPostsSection(),
           ],
@@ -341,11 +342,14 @@ class _ProfileViewState extends State<_ProfileView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (final post in _posts)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: PostCard(
-              post: post,
-              onTap: () => _openPost(post),
+          FadeSlideIn(
+            key: ValueKey<int?>(post.id),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PostCard(
+                post: post,
+                onTap: () => _openPost(post),
+              ),
             ),
           ),
       ],
