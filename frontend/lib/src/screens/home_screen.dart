@@ -10,6 +10,7 @@ import '../utils/format.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../widgets/ai_features_section.dart';
+import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/health_reminder_section.dart';
@@ -291,7 +292,7 @@ class _CurrentWeatherCard extends StatelessWidget {
     final temp = weather?.temperatureC;
     final heatIndex = weather?.heatIndexC;
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -351,9 +352,12 @@ class _ForecastStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 170,
+      // The extra vertical padding gives each card's drop shadow room to
+      // render instead of being clipped by the horizontal viewport.
+      height: 194,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(vertical: 12),
         itemCount: hours.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
@@ -379,56 +383,58 @@ class _ForecastCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final temp = hour.temperatureC;
     final heatIndex = hour.heatIndexC;
-    return Container(
+    return SizedBox(
       width: 96,
-      decoration: BoxDecoration(
+      child: AppCard(
+        margin: EdgeInsets.zero,
         color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          ListenableBuilder(
-            listenable: settingsController,
-            builder: (context, _) => Text(
-              formatHour(
-                hour.hour24,
-                use24Hour: settingsController.is24Hour,
-              ),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (hour.condition.iconBaseUri.isNotEmpty)
-            WeatherIcon(
-              iconBaseUri: hour.condition.iconBaseUri,
-              dark: true,
-              size: 40,
-              retryToken: retryToken,
-            ),
-          Column(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Text(
-                temp != null ? '${temp.toStringAsFixed(0)}°C' : '--°C',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (heatIndex != null)
-                Text(
-                  'Heat ${heatIndex.toStringAsFixed(0)}°',
+              ListenableBuilder(
+                listenable: settingsController,
+                builder: (context, _) => Text(
+                  formatHour(
+                    hour.hour24,
+                    use24Hour: settingsController.is24Hour,
+                  ),
                   style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+              ),
+              if (hour.condition.iconBaseUri.isNotEmpty)
+                WeatherIcon(
+                  iconBaseUri: hour.condition.iconBaseUri,
+                  dark: true,
+                  size: 40,
+                  retryToken: retryToken,
+                ),
+              Column(
+                children: <Widget>[
+                  Text(
+                    temp != null ? '${temp.toStringAsFixed(0)}°C' : '--°C',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (heatIndex != null)
+                    Text(
+                      'Heat ${heatIndex.toStringAsFixed(0)}°',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -456,54 +462,48 @@ class _EmergencyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return AppCard(
       color: scheme.errorContainer,
-      elevation: 2,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openDialer(context),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: ListenableBuilder(
-            listenable: settingsController,
-            builder: (context, _) => Row(
-              children: <Widget>[
-                Icon(
-                  Icons.emergency,
-                  color: scheme.onErrorContainer,
-                  size: 32,
+      elevated: true,
+      onTap: () => _openDialer(context),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ListenableBuilder(
+          listenable: settingsController,
+          builder: (context, _) => Row(
+            children: <Widget>[
+              Icon(
+                Icons.emergency,
+                color: scheme.onErrorContainer,
+                size: 32,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Emergency',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: scheme.onErrorContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Open dialer with ${settingsController.emergencyNumber}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onErrorContainer,
+                          ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Emergency',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                              color: scheme.onErrorContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Open dialer with ${settingsController.emergencyNumber}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onErrorContainer,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: scheme.onErrorContainer,
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: scheme.onErrorContainer,
+              ),
+            ],
           ),
         ),
       ),
