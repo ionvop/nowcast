@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/heat_alert_controller.dart';
+import 'app_card.dart';
 
 /// The "Notifications" card on the Home page: a master toggle that starts/stops
 /// the background notification service, plus per-type sub-toggles (heat alert
@@ -66,7 +67,7 @@ class _NotificationsSectionState extends State<NotificationsSection> {
     final healthReminderEnabled = _controller.isHealthReminderEnabled;
     final threshold = _controller.threshold;
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
