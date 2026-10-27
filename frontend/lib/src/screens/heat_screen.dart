@@ -267,7 +267,9 @@ class _HeatChartState extends State<_HeatChart> {
             FadeSlideIn(
               child: AppCard(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                  // The vertical padding is trimmed by the bevel width so the
+                  // thicker bevel does not push the legend below the fold.
+                  padding: const EdgeInsets.fromLTRB(12, 22, 20, 22),
                   child: SizedBox(
                     height: 340,
                     child: LineChart(_data(), key: _mainChartKey),
@@ -289,7 +291,8 @@ class _HeatChartState extends State<_HeatChart> {
             FadeSlideIn(
               child: AppCard(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                  // Trimmed by the bevel width, matching the main chart card.
+                  padding: const EdgeInsets.fromLTRB(12, 22, 20, 22),
                   child: SizedBox(
                     height: 220,
                     child: LineChart(_uvData(), key: _uvChartKey),
