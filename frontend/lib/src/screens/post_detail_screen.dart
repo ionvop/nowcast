@@ -8,6 +8,7 @@ import '../models/post.dart';
 import '../models/user.dart';
 import '../utils/map_focus.dart';
 import '../utils/time_ago.dart';
+import '../widgets/app_card.dart';
 import '../widgets/comment_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
@@ -372,7 +373,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Widget _buildPostCard(Post post, ThemeData theme, User user, DateTime? time) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -454,7 +455,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget _buildCommentsSection(Post post) {
     final theme = Theme.of(context);
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
