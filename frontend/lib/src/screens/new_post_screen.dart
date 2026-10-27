@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
+import '../widgets/app_card.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 
@@ -105,7 +106,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   FadeSlideIn(
-                    child: Card(
+                    child: AppCard(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
