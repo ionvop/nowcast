@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../overlay/activities_bubble_controller.dart';
 import 'ai_summary_section.dart';
+import 'app_card.dart';
 import 'bubble_toggle_card.dart';
 import 'sign_in_button.dart';
 
@@ -93,7 +94,7 @@ class _AiSignInPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
