@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../theme/app_theme.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
+import '../widgets/app_card.dart';
 
 /// One AI activity suggestion (API §5.21).
 class ActivitySuggestion {
@@ -328,15 +329,9 @@ class _ActivitiesChatPanelState extends State<ActivitiesChatPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
-        ],
-      ),
+      elevated: true,
       child: Column(
         children: <Widget>[
           _buildHeader(theme),
@@ -503,53 +498,51 @@ class _SuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return AppCard(
       margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onOpenUrl,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      suggestion.name,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                  ),
-                  _CategoryChip(category: suggestion.category),
-                ],
-              ),
-              if (suggestion.description.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(suggestion.description),
-              ],
-              if (suggestion.reason.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(
-                  suggestion.reason,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
+      borderRadius: 12,
+      onTap: onOpenUrl,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    suggestion.name,
+                    style: theme.textTheme.titleSmall,
                   ),
                 ),
+                _CategoryChip(category: suggestion.category),
               ],
-              if (suggestion.url != null) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(
-                  suggestion.url!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            ),
+            if (suggestion.description.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 4),
+              Text(suggestion.description),
             ],
-          ),
+            if (suggestion.reason.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 4),
+              Text(
+                suggestion.reason,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+            if (suggestion.url != null) ...<Widget>[
+              const SizedBox(height: 4),
+              Text(
+                suggestion.url!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
         ),
       ),
     );
