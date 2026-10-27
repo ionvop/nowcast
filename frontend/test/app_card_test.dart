@@ -59,7 +59,7 @@ void main() {
 
       final inner = _innerDecoration(tester);
       expect(inner.gradient, isA<LinearGradient>());
-      expect(inner.borderRadius, BorderRadius.circular(15));
+      expect(inner.borderRadius, BorderRadius.circular(13));
 
       final padding = tester.widget<Padding>(
         find
@@ -115,7 +115,7 @@ void main() {
       );
       expect(padding.padding, EdgeInsets.zero);
       expect(_outerDecoration(tester).borderRadius, BorderRadius.circular(12));
-      expect(_innerDecoration(tester).borderRadius, BorderRadius.circular(11));
+      expect(_innerDecoration(tester).borderRadius, BorderRadius.circular(9));
     });
 
     testWidgets('fires onTap when tapped', (tester) async {
@@ -244,6 +244,57 @@ void main() {
       expect(light.surfaceGradient, isNot(dark.surfaceGradient));
       expect(light.bevelGradient, isNot(dark.bevelGradient));
       expect(light.shadows, isNot(dark.shadows));
+    });
+
+    test('uses a pronounced bevel width', () {
+      expect(CardStyle.bevelWidthValue, 3);
+    });
+
+    testWidgets('bevel gradient has strong contrast between its stops', (
+      tester,
+    ) async {
+      late CardStyle light;
+      late CardStyle dark;
+
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (context) {
+              light = CardStyle.of(context);
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (context) {
+              dark = CardStyle.of(context);
+              return const SizedBox.shrink();
+            },
+          ),
+          dark: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double deltaOf(Gradient gradient) {
+        final linear = gradient as LinearGradient;
+        return (linear.colors.first.computeLuminance() -
+                linear.colors.last.computeLuminance())
+            .abs();
+      }
+
+      for (final style in <CardStyle>[light, dark]) {
+        final bevelDelta = deltaOf(style.bevelGradient);
+        final faceDelta = deltaOf(style.surfaceGradient);
+        // A flat ring would have a near-zero delta; the machined edge needs a
+        // clearly visible light-to-dark falloff.
+        expect(bevelDelta, greaterThan(0.05));
+        // The bevel must read as more pronounced than the face it frames.
+        expect(bevelDelta, greaterThan(faceDelta));
+      }
     });
   });
 }
