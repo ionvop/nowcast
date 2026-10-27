@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_card.dart';
+
 /// A reusable placeholder body used by every screen in the app shell.
 ///
 /// Renders a centered icon, a screen title, and a short description inside a
@@ -32,7 +34,7 @@ class PlaceholderView extends StatelessWidget {
       child: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Card(
+          child: AppCard(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
