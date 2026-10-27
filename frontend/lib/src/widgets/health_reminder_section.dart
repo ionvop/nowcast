@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/weather.dart';
+import 'app_card.dart';
 
 /// A single health reminder derived from the current weather.
 class HealthReminder {
@@ -111,7 +112,7 @@ class HealthReminderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final reminder = determineHealthReminder(weather);
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
