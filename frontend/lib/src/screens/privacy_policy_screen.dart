@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_card.dart';
 import '../widgets/fade_slide_in.dart';
 
 /// Privacy Policy page: a static, in-app explanation of how Nowcast collects,
@@ -121,7 +122,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   /// and text styles used elsewhere in the app.
   Widget _section(BuildContext context, String title, String body) {
     return FadeSlideIn(
-      child: Card(
+      child: AppCard(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
