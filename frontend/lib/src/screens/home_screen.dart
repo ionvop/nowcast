@@ -11,6 +11,7 @@ import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../widgets/ai_features_section.dart';
 import '../widgets/error_view.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/health_reminder_section.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/notifications_section.dart';
@@ -237,32 +238,41 @@ class _HomeContent extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          _CurrentWeatherCard(weather: weather, retryToken: retryToken),
+          FadeSlideIn(
+            child: _CurrentWeatherCard(
+              weather: weather,
+              retryToken: retryToken,
+            ),
+          ),
           if (weatherJson != null) ...<Widget>[
             const SizedBox(height: 16),
-            AiFeaturesSection(
-              currentConditions: weatherJson!,
-              hourlyForecast: forecastJson,
-              dailyForecast: dailyJson,
+            FadeSlideIn(
+              child: AiFeaturesSection(
+                currentConditions: weatherJson!,
+                hourlyForecast: forecastJson,
+                dailyForecast: dailyJson,
+              ),
             ),
           ],
           const SizedBox(height: 16),
-          HealthReminderSection(weather: weather),
+          FadeSlideIn(child: HealthReminderSection(weather: weather)),
           const SizedBox(height: 16),
-          const NotificationsSection(),
+          const FadeSlideIn(child: NotificationsSection()),
           const SizedBox(height: 16),
           if (forecast != null && forecast!.hours.isNotEmpty) ...<Widget>[
-            Text(
-              'Next 6 hours',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            FadeSlideIn(
+              child: Text(
+                'Next 6 hours',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
             ),
             const SizedBox(height: 8),
             _ForecastStrip(hours: forecast!.hours, retryToken: retryToken),
           ],
           const SizedBox(height: 24),
-          const _EmergencyButton(),
+          const FadeSlideIn(child: _EmergencyButton()),
         ],
       ),
     );
@@ -348,7 +358,11 @@ class _ForecastStrip extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final hour = hours[index];
-          return _ForecastCard(hour: hour, retryToken: retryToken);
+          return FadeSlideIn(
+            key: ValueKey<int>(index),
+            direction: RevealDirection.fromBottom,
+            child: _ForecastCard(hour: hour, retryToken: retryToken),
+          );
         },
       ),
     );
