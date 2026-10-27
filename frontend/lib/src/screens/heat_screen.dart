@@ -9,6 +9,7 @@ import '../shell/app_bottom_nav.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/error_view.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 import 'settings_screen.dart';
 
@@ -262,12 +263,14 @@ class _HeatChartState extends State<_HeatChart> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
-                child: SizedBox(
-                  height: 340,
-                  child: LineChart(_data(), key: _mainChartKey),
+            FadeSlideIn(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                  child: SizedBox(
+                    height: 340,
+                    child: LineChart(_data(), key: _mainChartKey),
+                  ),
                 ),
               ),
             ),
@@ -282,12 +285,14 @@ class _HeatChartState extends State<_HeatChart> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
-                child: SizedBox(
-                  height: 220,
-                  child: LineChart(_uvData(), key: _uvChartKey),
+            FadeSlideIn(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 24, 20, 24),
+                  child: SizedBox(
+                    height: 220,
+                    child: LineChart(_uvData(), key: _uvChartKey),
+                  ),
                 ),
               ),
             ),
