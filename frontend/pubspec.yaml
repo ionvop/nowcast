@@ -72,6 +72,9 @@ dependencies:
   # never completing after the user grants the permission.
   flutter_overlay_window: ^1.0.2
 
+  # Detects when a card scrolls into the viewport so it can fade/slide in.
+  visibility_detector: ^0.4.0+2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
