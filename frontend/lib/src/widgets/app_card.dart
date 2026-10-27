@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/card_style.dart';
 
-/// A card with a soft bevel edge, a subtle diagonal background gradient and a
-/// drop shadow, so it reads as a raised surface floating above the page
-/// instead of a flat rectangle stuck to it.
+/// A card with a pronounced machined bevel edge, a diagonal background
+/// gradient and a drop shadow, so it reads as a raised surface floating above
+/// the page instead of a flat rectangle stuck to it.
 ///
 /// Drop-in replacement for [Card]: the default [margin] and [borderRadius]
 /// match the app's previous `CardThemeData`, so swapping one for the other
