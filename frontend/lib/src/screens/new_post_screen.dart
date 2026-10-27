@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 
 /// New Post composer: a content field with an optional "include my current
@@ -86,17 +87,15 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('New Post'),
-      ),
+      appBar: AppBar(title: const Text('New Post')),
       body: Stack(
         children: <Widget>[
           SafeArea(
@@ -105,39 +104,42 @@ class _NewPostScreenState extends State<NewPostScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          TextField(
-                            controller: _contentController,
-                            maxLines: 5,
-                            decoration: const InputDecoration(
-                              hintText:
-                                  'What are the conditions like where you are?',
-                              border: OutlineInputBorder(),
+                  FadeSlideIn(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            TextField(
+                              controller: _contentController,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                hintText:
+                                    'What are the conditions like where you are?',
+                                border: OutlineInputBorder(),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          SwitchListTile(
-                            value: _includeLocation,
-                            onChanged: _submitting
-                                ? null
-                                : (value) {
-                                    setState(() {
-                                      _includeLocation = value;
-                                    });
-                                  },
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Include my current location'),
-                            subtitle: _includeLocation
-                                ? const Text(
-                                    'Your location will be shown on this post.')
-                                : null,
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            SwitchListTile(
+                              value: _includeLocation,
+                              onChanged: _submitting
+                                  ? null
+                                  : (value) {
+                                      setState(() {
+                                        _includeLocation = value;
+                                      });
+                                    },
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Include my current location'),
+                              subtitle: _includeLocation
+                                  ? const Text(
+                                      'Your location will be shown on this post.',
+                                    )
+                                  : null,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -155,9 +157,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
             ),
           ),
           if (_submitting)
-            const Positioned.fill(
-              child: LoadingOverlay(label: 'Posting…'),
-            ),
+            const Positioned.fill(child: LoadingOverlay(label: 'Posting…')),
         ],
       ),
     );
