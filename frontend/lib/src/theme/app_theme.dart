@@ -37,9 +37,12 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: surface,
-        elevation: 1,
+        elevation: 2,
+        shadowColor: const Color(0x14000000),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFD3DFF0)),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
@@ -76,9 +79,12 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: darkSurface,
-        elevation: 1,
+        elevation: 2,
+        shadowColor: const Color(0x73000000),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF3C3C3C)),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
