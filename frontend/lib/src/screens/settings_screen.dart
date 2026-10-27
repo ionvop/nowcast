@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/settings_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/fade_slide_in.dart';
 import 'privacy_policy_screen.dart';
 
 /// Settings page: currently just a dark-mode toggle (default is light mode).
@@ -25,147 +26,14 @@ class SettingsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: <Widget>[
-                      const Icon(Icons.dark_mode_outlined, color: AppTheme.seed),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              'Dark mode',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Use a dark color scheme for the app.',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch(
-                        value: darkMode,
-                        onChanged: (value) =>
-                            settingsController.setDarkMode(value),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: <Widget>[
-                      const Icon(Icons.access_time, color: AppTheme.seed),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              '24-hour time',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Display times in 24-hour (military) format.',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch(
-                        value: is24Hour,
-                        onChanged: (value) =>
-                            settingsController.set24Hour(value),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: <Widget>[
-                      const Icon(Icons.phone, color: AppTheme.seed),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              'Vibration',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Vibrate the phone when a heat danger alert '
-                              'appears.',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch(
-                        value: vibration,
-                        onChanged: (value) =>
-                            settingsController.setVibrationEnabled(value),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Card(
-                child: _EmergencyNumberCard(),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PrivacyPolicyScreen(),
-                      ),
-                    );
-                  },
+              FadeSlideIn(
+                child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: <Widget>[
                         const Icon(
-                          Icons.privacy_tip_outlined,
+                          Icons.dark_mode_outlined,
                           color: AppTheme.seed,
                         ),
                         const SizedBox(width: 12),
@@ -174,27 +42,161 @@ class SettingsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                'Privacy Policy',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                'Dark mode',
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Read how your data is collected and used.',
+                                'Use a dark color scheme for the app.',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right),
+                        Switch(
+                          value: darkMode,
+                          onChanged: (value) =>
+                              settingsController.setDarkMode(value),
+                        ),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+              FadeSlideIn(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.access_time, color: AppTheme.seed),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                '24-hour time',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Display times in 24-hour (military) format.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: is24Hour,
+                          onChanged: (value) =>
+                              settingsController.set24Hour(value),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              FadeSlideIn(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.phone, color: AppTheme.seed),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                'Vibration',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Vibrate the phone when a heat danger alert '
+                                'appears.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: vibration,
+                          onChanged: (value) =>
+                              settingsController.setVibrationEnabled(value),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              FadeSlideIn(child: Card(child: _EmergencyNumberCard())),
+              const SizedBox(height: 12),
+              FadeSlideIn(
+                child: Card(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.privacy_tip_outlined,
+                            color: AppTheme.seed,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Privacy Policy',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Read how your data is collected and used.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -223,8 +225,9 @@ class _EmergencyNumberCardState extends State<_EmergencyNumberCard> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        TextEditingController(text: settingsController.emergencyNumber);
+    _controller = TextEditingController(
+      text: settingsController.emergencyNumber,
+    );
   }
 
   @override
@@ -250,20 +253,17 @@ class _EmergencyNumberCardState extends State<_EmergencyNumberCard> {
                   children: <Widget>[
                     Text(
                       'Emergency number',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Number dialed by the home page\'s emergency button. '
                       'No call is placed unless you confirm it.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
