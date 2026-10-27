@@ -56,6 +56,11 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    // scrollUntilVisible stops as soon as the row is on screen, which can
+    // leave it straddling the bottom edge; nudge it fully into view so the
+    // tap lands on it.
+    await tester.ensureVisible(find.text('Privacy Policy'));
+    await tester.pumpAndSettle();
     expect(find.text('Privacy Policy'), findsOneWidget);
 
     // Tapping the row pushes the privacy policy screen.
