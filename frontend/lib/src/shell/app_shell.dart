@@ -6,6 +6,7 @@ import '../screens/home_screen.dart';
 import '../screens/map_screen.dart';
 import '../screens/profile_screen.dart';
 import '../utils/map_focus.dart';
+import '../widgets/reveal_scope.dart';
 import 'app_bottom_nav.dart';
 
 /// The main application shell: a persistent bottom navigation bar with five
@@ -32,6 +33,27 @@ class _AppShellState extends State<AppShell> {
     CommunityScreen(),
     ProfileScreen(),
   ];
+
+  /// Per-tab counters bumped whenever that tab becomes active. Screens stay
+  /// alive inside the [IndexedStack], so this is what tells their cards to
+  /// replay the entrance animation when the user returns to the tab.
+  final List<int> _activations = List<int>.filled(_screens.length, 0);
+
+  /// Per-tab stagger allocators, so cards revealed together on one tab are
+  /// sequenced independently of the other tabs.
+  final List<RevealStagger> _staggers = List<RevealStagger>.generate(
+    _screens.length,
+    (_) => RevealStagger(),
+  );
+
+  /// Switches to [index], replaying that tab's entrance animations.
+  void _select(int index) {
+    if (index == _selectedIndex) return;
+    setState(() {
+      _selectedIndex = index;
+      _activations[index]++;
+    });
+  }
 
   static const List<AppNavDestination> _destinations = <AppNavDestination>[
     AppNavDestination(
@@ -77,9 +99,7 @@ class _AppShellState extends State<AppShell> {
 
   void _onMapFocus() {
     if (!mounted) return;
-    setState(() {
-      _selectedIndex = mapFocus.selectedTab;
-    });
+    _select(mapFocus.selectedTab);
   }
 
   @override
@@ -94,15 +114,18 @@ class _AppShellState extends State<AppShell> {
       extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: <Widget>[
+          for (var i = 0; i < _screens.length; i++)
+            RevealScope(
+              activation: _activations[i],
+              stagger: _staggers[i],
+              child: _screens[i],
+            ),
+        ],
       ),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onDestinationSelected: _select,
         destinations: _destinations,
       ),
     );
