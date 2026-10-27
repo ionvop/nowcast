@@ -10,6 +10,7 @@ import '../utils/map_focus.dart';
 import '../utils/time_ago.dart';
 import '../widgets/comment_card.dart';
 import '../widgets/error_view.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/user_avatar.dart';
 
@@ -361,9 +362,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _buildPostCard(post, theme, user, time),
+            FadeSlideIn(child: _buildPostCard(post, theme, user, time)),
             const SizedBox(height: 16),
-            _buildCommentsSection(post),
+            FadeSlideIn(child: _buildCommentsSection(post)),
           ],
         ),
       ),
@@ -542,12 +543,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (final comment in _comments)
-          CommentCard(
-            comment: comment,
-            isOwner: comment.userId != null && comment.userId == _currentUserId,
-            onDelete: _deletingCommentId == comment.id
-                ? null
-                : () => _confirmDeleteComment(comment),
+          FadeSlideIn(
+            key: ValueKey<int?>(comment.id),
+            child: CommentCard(
+              comment: comment,
+              isOwner:
+                  comment.userId != null && comment.userId == _currentUserId,
+              onDelete: _deletingCommentId == comment.id
+                  ? null
+                  : () => _confirmDeleteComment(comment),
+            ),
           ),
       ],
     );
