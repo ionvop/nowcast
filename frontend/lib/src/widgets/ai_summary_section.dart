@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../models/ai_summary.dart';
+import 'app_card.dart';
 
 /// The "AI summary" card on the Home page.
 ///
@@ -126,7 +127,7 @@ class _AiSummarySectionState extends State<AiSummarySection> {
       );
     }
 
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
