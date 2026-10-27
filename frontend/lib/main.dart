@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import 'src/auth/auth_controller.dart';
 import 'src/overlay/activities_bubble_controller.dart';
@@ -11,6 +12,10 @@ import 'src/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Report visibility changes at the end of every frame instead of batching
+  // them every 500ms, so cards start their entrance animation as soon as they
+  // scroll into view.
+  VisibilityDetectorController.instance.updateInterval = Duration.zero;
   // Restore any stored token before the first frame so the shell can show the
   // correct signed-in / signed-out state immediately.
   await authController.init();
