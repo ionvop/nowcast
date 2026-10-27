@@ -6,6 +6,7 @@ import '../models/post.dart';
 import '../shell/app_bottom_nav.dart';
 import '../utils/post_filter.dart';
 import '../widgets/error_view.dart';
+import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
 import '../widgets/placeholder_view.dart';
 import '../widgets/post_card.dart';
@@ -196,9 +197,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
               itemCount: posts.length,
               itemBuilder: (context, index) {
                 final post = posts[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: PostCard(post: post, onTap: () => _openPost(post)),
+                return FadeSlideIn(
+                  key: ValueKey<int?>(post.id),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: PostCard(post: post, onTap: () => _openPost(post)),
+                  ),
                 );
               },
             ),
