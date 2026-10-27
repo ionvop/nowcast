@@ -5,6 +5,7 @@ import '../auth/auth_controller.dart';
 import '../models/post.dart';
 import '../models/user.dart';
 import '../shell/app_bottom_nav.dart';
+import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/loading_overlay.dart';
@@ -366,7 +367,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
