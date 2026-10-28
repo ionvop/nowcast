@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nowcast/src/api/api_client.dart';
 import 'package:nowcast/src/utils/geolocation.dart';
+import 'package:nowcast/src/utils/position_cache.dart';
 
 /// A [GeolocatorPlatform] whose individual steps can be made to hang, fail, or
 /// succeed, so the timeout and fallback paths in `getPosition()` can be
@@ -17,6 +20,7 @@ class _FakeGeolocator extends GeolocatorPlatform {
     this.requestPermissionHangs = false,
     this.requestPermissionThrowsInProgress = false,
     this.positionHangs = false,
+    this.positionThrows = false,
     this.lastKnownPosition,
   });
 
@@ -39,6 +43,10 @@ class _FakeGeolocator extends GeolocatorPlatform {
 
   /// When true, [getCurrentPosition] never completes.
   final bool positionHangs;
+
+  /// When true, [getCurrentPosition] throws a [PlatformException], as the
+  /// platform does when a background isolate is denied a fresh fix.
+  final bool positionThrows;
 
   /// The value returned by [getLastKnownPosition].
   final Position? lastKnownPosition;
@@ -72,6 +80,12 @@ class _FakeGeolocator extends GeolocatorPlatform {
 
   @override
   Future<Position> getCurrentPosition({LocationSettings? locationSettings}) {
+    if (positionThrows) {
+      throw PlatformException(
+        code: 'ERROR_WHILE_ACQUIRING_POSITION',
+        message: 'Location can only be used while using the app',
+      );
+    }
     if (positionHangs) {
       return Completer<Position>().future;
     }
@@ -102,6 +116,10 @@ const Duration _shortTimeout = Duration(milliseconds: 20);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
 
   group('getPosition', () {
     test('returns the current position when everything succeeds', () async {
@@ -251,6 +269,42 @@ void main() {
         ),
       );
     });
+
+    test('writes the resolved position to the app-level cache', () async {
+      GeolocatorPlatform.instance = _FakeGeolocator();
+
+      await getPosition(timeout: _shortTimeout);
+
+      final cached = await readCachedPosition();
+      expect(cached, isNotNull);
+      expect(cached!.latitude, closeTo(37.7749, 1e-6));
+    });
+
+    test('falls back to the app-level cache when the fix is rejected',
+        () async {
+      // Simulates a background isolate: the platform refuses a fresh fix and
+      // has no OS-level last known position either.
+      await cachePosition(
+        Position(
+          latitude: 35.6762,
+          longitude: 139.6503,
+          timestamp: DateTime.now(),
+          accuracy: 30.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+      );
+      GeolocatorPlatform.instance = _FakeGeolocator(positionThrows: true);
+
+      final position = await getPosition(timeout: _shortTimeout);
+
+      expect(position.latitude, closeTo(35.6762, 1e-6));
+      expect(position.longitude, closeTo(139.6503, 1e-6));
+    });
   });
 
   group('getPositionSilently', () {
@@ -308,6 +362,58 @@ void main() {
       GeolocatorPlatform.instance = _FakeGeolocator(positionHangs: true);
 
       expect(await getPositionSilently(timeout: _shortTimeout), isNull);
+    });
+
+    test('returns the app-level cache without touching the platform',
+        () async {
+      await cachePosition(
+        Position(
+          latitude: 48.8566,
+          longitude: 2.3522,
+          timestamp: DateTime.now(),
+          accuracy: 20.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+      );
+      // Permission denied and services disabled: the platform would return
+      // null, so a non-null result can only come from the cache.
+      GeolocatorPlatform.instance = _FakeGeolocator(
+        serviceEnabled: false,
+        permission: LocationPermission.denied,
+      );
+
+      final position = await getPositionSilently(timeout: _shortTimeout);
+
+      expect(position, isNotNull);
+      expect(position!.latitude, closeTo(48.8566, 1e-6));
+    });
+
+    test('returns the app-level cache when the fix is rejected', () async {
+      await cachePosition(
+        Position(
+          latitude: 52.52,
+          longitude: 13.405,
+          timestamp: DateTime.now(),
+          accuracy: 20.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        ),
+      );
+      GeolocatorPlatform.instance = _FakeGeolocator(positionThrows: true);
+
+      final position = await getPositionSilently(timeout: _shortTimeout);
+
+      expect(position, isNotNull);
+      expect(position!.latitude, closeTo(52.52, 1e-6));
     });
   });
 }
