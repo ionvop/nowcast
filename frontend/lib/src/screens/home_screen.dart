@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _progressLabel = 'Loading geolocation... (1/4)';
+      _progressLabel = 'Loading geolocation... (1/5)';
     });
 
     try {
