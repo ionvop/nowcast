@@ -3,7 +3,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nowcast/src/services/heat_alert_controller.dart';
+import 'package:nowcast/src/services/notification_permission.dart';
 import 'package:nowcast/src/widgets/notifications_section.dart';
+
+/// Permission platform whose answers are scripted per test.
+class _FakePermissionPlatform extends NotificationPermissionPlatform {
+  _FakePermissionPlatform({this.enabled = false, this.grantOnRequest = false});
+
+  bool enabled;
+  bool grantOnRequest;
+  int openSettingsCount = 0;
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Future<bool> areNotificationsEnabled() async => enabled;
+
+  @override
+  Future<bool> requestPermission() async {
+    if (grantOnRequest) enabled = true;
+    return grantOnRequest;
+  }
+
+  @override
+  Future<void> openSettings() async {
+    openSettingsCount++;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -71,5 +98,60 @@ void main() {
     expect(controller.isNotificationsEnabled, isTrue);
     expect(find.text('Heat alert'), findsOneWidget);
     expect(find.text('Health reminder'), findsOneWidget);
+  });
+
+  testWidgets('tapping the master switch requests the OS permission',
+      (WidgetTester tester) async {
+    final platform = _FakePermissionPlatform(grantOnRequest: true);
+    final controller = HeatAlertController(
+      nativeServiceAvailable: false,
+      notificationPermission: NotificationPermission(platform: platform),
+    );
+    await pumpSection(tester, controller);
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    expect(platform.enabled, isTrue);
+    expect(controller.isNotificationsEnabled, isTrue);
+  });
+
+  testWidgets('reverts the toggle and offers settings when permission is denied',
+      (WidgetTester tester) async {
+    final platform = _FakePermissionPlatform();
+    final controller = HeatAlertController(
+      nativeServiceAvailable: false,
+      notificationPermission: NotificationPermission(platform: platform),
+    );
+    await pumpSection(tester, controller);
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    expect(controller.isNotificationsEnabled, isFalse);
+    expect(find.text('Heat alert'), findsNothing);
+    expect(find.textContaining('Notifications are blocked'), findsOneWidget);
+
+    await tester.tap(find.text('Open settings'));
+    await tester.pumpAndSettle();
+
+    expect(platform.openSettingsCount, 1);
+  });
+
+  testWidgets('shows the blocked warning when enabled but blocked by the OS',
+      (WidgetTester tester) async {
+    final platform = _FakePermissionPlatform(enabled: true);
+    final controller = HeatAlertController(
+      nativeServiceAvailable: false,
+      notificationPermission: NotificationPermission(platform: platform),
+    );
+    await controller.enableNotifications();
+    // Simulate the user revoking the permission in the system settings.
+    platform.enabled = false;
+    await controller.refreshPermissionState();
+    await pumpSection(tester, controller);
+
+    expect(controller.areNotificationsBlocked, isTrue);
+    expect(find.text('Notifications are blocked'), findsOneWidget);
   });
 }
