@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 
 import '../api/api_client.dart';
+import 'position_cache.dart';
 
 /// How long a single geolocation step (service check, permission check,
 /// permission request, or position fix) may take before it is abandoned.
@@ -24,6 +25,11 @@ const Duration kLocationTimeout = Duration(seconds: 15);
 /// fix that never arrives surfaces a [NetworkException] — and therefore a
 /// "Try again" action — instead of hanging indefinitely. When the fresh fix
 /// times out, the last known position is used as a fallback.
+///
+/// A successfully resolved position is also written to the app-level cache
+/// (see [cachePosition]) so the floating bubble — which runs in a foreground
+/// service that Android does not treat as "while using the app" — can reuse
+/// it without a fresh fix.
 Future<Position> getPosition({
   String subject = 'this data',
   Duration timeout = kLocationTimeout,
@@ -50,7 +56,9 @@ Future<Position> getPosition({
     throw NetworkException(_deniedForeverMessage(subject));
   }
 
-  return _currentPosition(timeout, subject);
+  final position = await _currentPosition(timeout, subject);
+  await cachePosition(position);
+  return position;
 }
 
 /// Reads the current permission, treating a timeout as "not yet granted" so
@@ -91,8 +99,8 @@ Future<LocationPermission> _requestPermission(
   return permission;
 }
 
-/// Obtains a fresh position fix, falling back to the last known position when
-/// the fix times out.
+/// Obtains a fresh position fix, falling back to the last known position and
+/// then to the app-level cache when the fix fails.
 Future<Position> _currentPosition(Duration timeout, String subject) async {
   try {
     return await Geolocator.getCurrentPosition(
@@ -104,10 +112,18 @@ Future<Position> _currentPosition(Duration timeout, String subject) async {
     throw NetworkException(_disabledMessage(subject));
   } on PermissionDeniedException {
     throw NetworkException(_deniedMessage(subject));
+  } on Exception {
+    // A background isolate (e.g. the heat-alert service) surfaces the
+    // "location can only be used while using the app" restriction as a
+    // PlatformException. Fall through to the cached positions instead of
+    // failing outright.
   }
 
   final lastKnown = await _lastKnownPosition(timeout);
   if (lastKnown != null) return lastKnown;
+
+  final cached = await readCachedPosition();
+  if (cached != null) return cached;
 
   throw NetworkException(
     'Couldn\'t determine your location. Make sure you have a clear view of '
@@ -145,11 +161,20 @@ String _deniedForeverMessage(String subject) =>
 /// permission has not already been granted, and falls back to the last known
 /// position when a fresh fix times out.
 ///
+/// The app-level cache written by [getPosition] is consulted **first**: the
+/// overlay runs in a foreground service that Android does not treat as
+/// "while using the app", so a fresh fix (and even the OS-level last known
+/// position) is normally rejected with a `SecurityException`. Reading the
+/// cache avoids a pointless multi-second wait before failing.
+///
 /// Every step is bounded by [timeout] so a wedged platform call cannot stall
 /// the caller indefinitely.
 Future<Position?> getPositionSilently({
   Duration timeout = const Duration(seconds: 10),
 }) async {
+  final cached = await readCachedPosition();
+  if (cached != null) return cached;
+
   try {
     if (!await Geolocator.isLocationServiceEnabled().timeout(timeout)) {
       return null;
