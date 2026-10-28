@@ -21,7 +21,8 @@ class NotificationsSection extends StatefulWidget {
   State<NotificationsSection> createState() => _NotificationsSectionState();
 }
 
-class _NotificationsSectionState extends State<NotificationsSection> {
+class _NotificationsSectionState extends State<NotificationsSection>
+    with WidgetsBindingObserver {
   bool _starting = false;
 
   HeatAlertController get _controller =>
@@ -30,13 +31,29 @@ class _NotificationsSectionState extends State<NotificationsSection> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller.addListener(_onChanged);
+    // Re-read the OS permission once the first frame is up so a permission
+    // revoked while the app was closed shows the blocked warning immediately.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.refreshPermissionState();
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The user may have changed the permission in the system settings while
+    // the app was in the background.
+    if (state == AppLifecycleState.resumed) {
+      _controller.refreshPermissionState();
+    }
   }
 
   void _onChanged() {
@@ -47,13 +64,32 @@ class _NotificationsSectionState extends State<NotificationsSection> {
     setState(() => _starting = true);
     try {
       if (value) {
-        await _controller.enableNotifications();
+        final enabled = await _controller.enableNotifications();
+        if (!enabled && mounted) _showPermissionDenied();
       } else {
         await _controller.disableNotifications();
       }
     } finally {
       if (mounted) setState(() => _starting = false);
     }
+  }
+
+  /// Tells the user why the toggle snapped back off and offers a shortcut to
+  /// the system settings, where the permission can still be granted after the
+  /// system stopped showing the dialog.
+  void _showPermissionDenied() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Notifications are blocked. Allow them in your device settings to '
+          'turn this on.',
+        ),
+        action: SnackBarAction(
+          label: 'Open settings',
+          onPressed: _controller.openNotificationSettings,
+        ),
+      ),
+    );
   }
 
   Future<void> _onThreshold(double value) async {
@@ -103,6 +139,12 @@ class _NotificationsSectionState extends State<NotificationsSection> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
+            if (_controller.areNotificationsBlocked) ...<Widget>[
+              const SizedBox(height: 8),
+              _BlockedWarning(
+                onOpenSettings: _controller.openNotificationSettings,
+              ),
+            ],
             if (enabled) ...<Widget>[
               const SizedBox(height: 8),
               const Divider(),
@@ -173,6 +215,62 @@ class _NotificationsSectionState extends State<NotificationsSection> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Inline warning shown when notifications are enabled in the app but blocked
+/// by the operating system.
+class _BlockedWarning extends StatelessWidget {
+  const _BlockedWarning({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.notifications_off, color: colors.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Notifications are blocked',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.onErrorContainer,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Allow them in your device settings to receive alerts.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onErrorContainer,
+                      ),
+                ),
+                TextButton(
+                  onPressed: onOpenSettings,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    foregroundColor: colors.onErrorContainer,
+                  ),
+                  child: const Text('Open settings'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
