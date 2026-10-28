@@ -3,6 +3,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'heat_alert_service.dart';
+import 'notification_permission.dart';
 
 /// Manages the persistent-notification toggles (a master switch plus the
 /// heat-alert and health-reminder sub-toggles) and the heat-index danger
@@ -19,16 +20,42 @@ class HeatAlertController extends ChangeNotifier {
   /// Injectable so tests can disable the platform bridge; when false the
   /// controller only persists state and does not touch the background-service
   /// plugin.
-  HeatAlertController({bool? nativeServiceAvailable})
-      : _nativeServiceAvailable =
-            nativeServiceAvailable ?? _defaultNativeServiceAvailable();
+  ///
+  /// [notificationPermission] is injectable for tests; it defaults to a
+  /// service backed by `flutter_local_notifications`.
+  HeatAlertController({
+    bool? nativeServiceAvailable,
+    NotificationPermission? notificationPermission,
+  })  : _nativeServiceAvailable =
+            nativeServiceAvailable ?? _defaultNativeServiceAvailable(),
+        _notificationPermission = notificationPermission ??
+            _defaultNotificationPermission(
+              nativeServiceAvailable ?? _defaultNativeServiceAvailable(),
+            );
 
   final bool _nativeServiceAvailable;
+  final NotificationPermission _notificationPermission;
+
+  /// The permission service used when none is injected.
+  ///
+  /// Platforms without a native background service also have no notification
+  /// permission to ask for, so they get a stub that never touches a platform
+  /// channel (which keeps widget tests hermetic).
+  static NotificationPermission _defaultNotificationPermission(
+    bool nativeServiceAvailable,
+  ) {
+    return nativeServiceAvailable
+        ? NotificationPermission()
+        : NotificationPermission(
+            platform: const UnsupportedNotificationPermissionPlatform(),
+          );
+  }
 
   bool _initialized = false;
   bool _notificationsEnabled = false;
   bool _heatAlertEnabled = true;
   bool _healthReminderEnabled = true;
+  bool _notificationsBlocked = false;
   double _threshold = kDefaultHeatAlertThreshold;
 
   /// Whether [init] has completed.
@@ -45,6 +72,14 @@ class HeatAlertController extends ChangeNotifier {
 
   /// The heat-index danger threshold in degrees Celsius.
   double get threshold => _threshold;
+
+  /// Whether notifications are enabled in the app but blocked by the OS.
+  ///
+  /// True when the master toggle is on while the system notification
+  /// permission is missing (for example because the user revoked it in the
+  /// system settings after enabling it here).
+  bool get areNotificationsBlocked =>
+      _notificationsEnabled && _notificationsBlocked;
 
   /// Whether a native background service backs this platform.
   bool get hasNativeBackgroundService => _nativeServiceAvailable;
@@ -81,11 +116,28 @@ class HeatAlertController extends ChangeNotifier {
     if (_notificationsEnabled && _nativeServiceAvailable) {
       await FlutterBackgroundService().startService();
     }
+    await refreshPermissionState();
     notifyListeners();
   }
 
   /// Turns persistent notifications on and starts the background service.
-  Future<void> enableNotifications() async {
+  ///
+  /// When the platform has a notification permission, it is requested first.
+  /// Returns `false` (leaving the toggle off and the service stopped) when the
+  /// user does not grant it, so the UI never claims notifications are on while
+  /// the OS blocks them.
+  Future<bool> enableNotifications() async {
+    if (_notificationPermission.isSupported) {
+      final status = await _notificationPermission.request();
+      _notificationsBlocked =
+          status != NotificationPermissionStatus.granted &&
+              status != NotificationPermissionStatus.unsupported;
+      if (_notificationsBlocked) {
+        notifyListeners();
+        return false;
+      }
+    }
+
     _notificationsEnabled = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kNotificationsEnabledKey, true);
@@ -93,6 +145,7 @@ class HeatAlertController extends ChangeNotifier {
       await FlutterBackgroundService().startService();
     }
     notifyListeners();
+    return true;
   }
 
   /// Turns persistent notifications off and stops the background service.
@@ -142,6 +195,24 @@ class HeatAlertController extends ChangeNotifier {
     await prefs.setDouble(kHeatAlertThresholdKey, value);
     notifyListeners();
   }
+
+  /// Re-reads the OS notification permission without prompting the user.
+  ///
+  /// Call this when the app resumes so a permission revoked (or granted) in
+  /// the system settings is reflected in the UI.
+  Future<void> refreshPermissionState() async {
+    if (!_notificationPermission.isSupported) return;
+    final status = await _notificationPermission.check();
+    final blocked = status != NotificationPermissionStatus.granted &&
+        status != NotificationPermissionStatus.unsupported;
+    if (blocked == _notificationsBlocked) return;
+    _notificationsBlocked = blocked;
+    notifyListeners();
+  }
+
+  /// Opens the OS notification settings for this app.
+  Future<void> openNotificationSettings() =>
+      _notificationPermission.openSettings();
 
   /// Asks the running background service to re-run its check immediately so a
   /// sub-toggle change is reflected without waiting for the next tick.
