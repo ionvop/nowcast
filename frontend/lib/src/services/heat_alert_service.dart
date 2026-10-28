@@ -112,7 +112,13 @@ Future<void> configureHeatAlertService() async {
   await notifications.initialize(
     settings: const InitializationSettings(
       android: AndroidInitializationSettings('ic_notification'),
-      iOS: DarwinInitializationSettings(),
+      // Do not prompt at startup: the permission is requested when the user
+      // turns the Notifications toggle on (see NotificationPermission).
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestSoundPermission: false,
+        requestBadgePermission: false,
+      ),
     ),
   );
   final android = notifications
