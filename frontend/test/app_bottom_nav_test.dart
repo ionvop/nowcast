@@ -180,7 +180,7 @@ void main() {
     expect(barRect.height, AppBottomNav.barHeight + 34);
   });
 
-  testWidgets('bottomInsetOf covers the bar plus the gesture inset', (
+  testWidgets('contentInsetOf ends content on the bar plus the gesture inset', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(400, 800);
@@ -194,14 +194,16 @@ void main() {
       MaterialApp(
         home: Builder(
           builder: (context) {
-            inset = AppBottomNav.bottomInsetOf(context);
+            inset = AppBottomNav.contentInsetOf(context);
             return const SizedBox.shrink();
           },
         ),
       ),
     );
 
-    expect(inset, AppBottomNav.totalHeight + 34);
+    // Deliberately excludes [AppBottomNav.circleLift]: the content area ends on
+    // the bar's flat top edge, and only the raised circle overlaps it.
+    expect(inset, AppBottomNav.barHeight + 34);
   });
 
   testWidgets('renders in dark mode', (tester) async {
