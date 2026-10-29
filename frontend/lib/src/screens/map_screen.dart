@@ -720,12 +720,9 @@ class _MapScreenState extends State<MapScreen> {
               markers: _markers,
               myLocationEnabled: true,
               myLocationButtonEnabled: true,
-              // The shell extends the body behind the nav bar, so inset the
-              // map's own controls (my-location button, compass) to keep them
-              // above it.
-              padding: EdgeInsets.only(
-                bottom: AppBottomNav.bottomInsetOf(context),
-              ),
+              // The shell ends the body on the nav bar's flat top edge, so the
+              // map's own controls (my-location button, compass, logo) already
+              // sit above the bar without extra padding.
               onMapCreated: (controller) {
                 _mapController = controller;
                 _applyPendingCenter();
@@ -764,9 +761,14 @@ class _MapScreenState extends State<MapScreen> {
         child: SafeArea(
           top: false,
           child: Padding(
-            // The SafeArea already clears the nav bar; the extra bottom margin
-            // keeps the card from crowding it.
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+            // The shell ends the body on the bar's flat top edge, so the card
+            // only has to clear the raised circle plus a small gap.
+            padding: EdgeInsets.fromLTRB(
+              12,
+              12,
+              12,
+              AppBottomNav.circleLift + 8,
+            ),
             child: _PostInfoCard(
               post: post,
               onClose: _closeInfoCard,
@@ -788,9 +790,14 @@ class _MapScreenState extends State<MapScreen> {
       child: SafeArea(
         top: false,
         child: Padding(
-          // The SafeArea already clears the nav bar; the extra bottom margin
-          // keeps the card from crowding it.
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+          // The shell ends the body on the bar's flat top edge, so the card
+          // only has to clear the raised circle plus a small gap.
+          padding: EdgeInsets.fromLTRB(
+            12,
+            12,
+            12,
+            AppBottomNav.circleLift + 8,
+          ),
           child: _InfoCard(
             heatIndex: heatIndex,
             createdAt: createdAt,
