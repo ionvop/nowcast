@@ -105,23 +105,39 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Let each screen's content flow behind the nav bar. The bar's top
-      // [AppBottomNav.circleLift] strip is transparent, so without this the
-      // Scaffold would stop the body at the bar's top edge and expose a solid
-      // band of the bar's background color above it. Screens add
-      // [AppBottomNav.bottomInsetOf] to their scrollable's bottom padding so
-      // their last item still clears the bar.
+      // Let the body flow behind the nav bar so the raised circle can overlap
+      // the content's bottom edge. The body is then padded by
+      // [AppBottomNav.contentInsetOf], which ends it exactly on the bar's flat
+      // top edge — only the [AppBottomNav.circleLift] strip the circle rises
+      // into overlaps the content.
       extendBody: true,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: <Widget>[
-          for (var i = 0; i < _screens.length; i++)
-            RevealScope(
-              activation: _activations[i],
-              stagger: _staggers[i],
-              child: _screens[i],
+      body: Builder(
+        builder: (context) {
+          return MediaQuery.removePadding(
+            // `extendBody` inflates `padding.bottom` by the bar's height.
+            // Removing it keeps the screens' own `SafeArea`s from
+            // double-padding now that the body itself is inset below.
+            context: context,
+            removeBottom: true,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: AppBottomNav.contentInsetOf(context),
+              ),
+              child: IndexedStack(
+                key: const Key('shell-body'),
+                index: _selectedIndex,
+                children: <Widget>[
+                  for (var i = 0; i < _screens.length; i++)
+                    RevealScope(
+                      activation: _activations[i],
+                      stagger: _staggers[i],
+                      child: _screens[i],
+                    ),
+                ],
+              ),
             ),
-        ],
+          );
+        },
       ),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
