@@ -4,7 +4,6 @@ import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
 import '../models/user.dart';
-import '../shell/app_bottom_nav.dart';
 import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
@@ -255,17 +254,11 @@ class _ProfileViewState extends State<_ProfileView> {
       return const _SignInPrompt();
     }
     return SafeArea(
-      // The shell extends the body behind the nav bar, so the scroll viewport
-      // must not be shrunk by the bottom inset; the scroll view's own padding
-      // clears the bar instead.
+      // The shell already ends the body on the nav bar's flat top edge, so the
+      // scroll viewport must not be shrunk by the bottom inset.
       bottom: false,
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + AppBottomNav.bottomInsetOf(context),
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
