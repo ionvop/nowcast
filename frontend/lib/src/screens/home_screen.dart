@@ -5,7 +5,6 @@ import '../api/api_client.dart';
 import '../models/forecast_hour.dart';
 import '../models/weather.dart';
 import '../services/settings_controller.dart';
-import '../shell/app_bottom_nav.dart';
 import '../utils/format.dart';
 import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
@@ -216,17 +215,11 @@ class _HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      // The shell extends the body behind the nav bar, so the scroll viewport
-      // must not be shrunk by the bottom inset; the list's own padding clears
-      // the bar instead.
+      // The shell already ends the body on the nav bar's flat top edge, so the
+      // scroll viewport must not be shrunk by the bottom inset.
       bottom: false,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + AppBottomNav.bottomInsetOf(context),
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         children: <Widget>[
           if (city != null && city!.isNotEmpty) ...<Widget>[
             Text(
