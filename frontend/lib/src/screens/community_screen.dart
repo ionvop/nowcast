@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../models/post.dart';
-import '../shell/app_bottom_nav.dart';
 import '../utils/post_filter.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
@@ -186,14 +185,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
             onRefresh: _load,
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              // The shell extends the body behind the nav bar, so the list
-              // pads its bottom to clear the bar.
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                16 + AppBottomNav.bottomInsetOf(context),
-              ),
+              // The shell already ends the body on the nav bar's flat top
+              // edge, so the list only needs its own breathing room.
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               itemCount: posts.length,
               itemBuilder: (context, index) {
                 final post = posts[index];
