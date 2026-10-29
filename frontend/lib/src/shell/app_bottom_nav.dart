@@ -34,9 +34,13 @@ class AppNavDestination {
 /// The bar reserves [totalHeight] pixels of vertical space, of which the bottom
 /// [barHeight] are the bar itself and the top [circleLift] are the strip the
 /// circle rises into. Only the bar itself paints a background; the lift strip
-/// is transparent so page content shows through it. Hosts should therefore set
-/// `Scaffold.extendBody: true` and add [bottomInsetOf] to the bottom padding of
-/// their scrollables so the last item still clears the bar.
+/// is transparent so page content shows through it.
+///
+/// Hosts should set `Scaffold.extendBody: true` and pad their body by
+/// [contentInsetOf], which ends the content area exactly on the bar's flat top
+/// edge. The raised circle then overlaps only the bottom [circleLift] pixels at
+/// the bottom-center of the content, which is why screens keep a little extra
+/// breathing room above the bar.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -69,14 +73,17 @@ class AppBottomNav extends StatelessWidget {
   /// Total vertical space the bar occupies, including the circle's lift.
   static const double totalHeight = barHeight + circleLift;
 
-  /// The bottom padding a scrollable needs so its last item clears this bar.
+  /// The bottom padding a host body needs so its content ends on the bar's
+  /// flat top edge.
   ///
-  /// Returns [totalHeight] plus the device's bottom gesture inset. Reads
-  /// [MediaQuery.viewPaddingOf] rather than `padding` on purpose: hosts use
-  /// `Scaffold.extendBody`, which already inflates `padding.bottom` by the
-  /// bar's height, so reading `padding` here would double-count it.
-  static double bottomInsetOf(BuildContext context) {
-    return totalHeight + MediaQuery.viewPaddingOf(context).bottom;
+  /// Returns [barHeight] plus the device's bottom gesture inset — deliberately
+  /// *not* [totalHeight], so the [circleLift] strip the circle rises into is
+  /// left to the content. Reads [MediaQuery.viewPaddingOf] rather than
+  /// `padding` on purpose: hosts use `Scaffold.extendBody`, which already
+  /// inflates `padding.bottom` by the bar's height, so reading `padding` here
+  /// would double-count it.
+  static double contentInsetOf(BuildContext context) {
+    return barHeight + MediaQuery.viewPaddingOf(context).bottom;
   }
 
   /// Index of the destination rendered as the raised circle.
