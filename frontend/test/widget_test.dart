@@ -80,4 +80,18 @@ void main() {
     final shell = tester.widget<Scaffold>(find.byType(Scaffold).first);
     expect(shell.extendBody, isTrue);
   });
+
+  testWidgets('App shell ends its content on the nav bar\'s flat top edge',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const NowcastApp());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final bodyRect = tester.getRect(find.byKey(const Key('shell-body')));
+    final barRect = tester.getRect(find.byKey(const Key('nav-bar')));
+
+    // The body stops exactly where the flat bar starts, so only the raised
+    // circle's lift strip overlaps the content.
+    expect(bodyRect.bottom, moreOrLessEquals(barRect.top, epsilon: 0.5));
+  });
 }
