@@ -5,7 +5,6 @@ import '../api/api_client.dart';
 import '../models/forecast_day.dart';
 import '../models/forecast_hour.dart';
 import '../services/settings_controller.dart';
-import '../shell/app_bottom_nav.dart';
 import '../utils/format.dart';
 import '../utils/geolocation.dart';
 import '../widgets/app_card.dart';
@@ -218,19 +217,13 @@ class _HeatChartState extends State<_HeatChart> {
     final series = isHourly ? _series : _daySeries;
 
     return SafeArea(
-      // The shell extends the body behind the nav bar, so the scroll viewport
-      // must not be shrunk by the bottom inset; the list's own padding clears
-      // the bar instead.
+      // The shell already ends the body on the nav bar's flat top edge, so the
+      // scroll viewport must not be shrunk by the bottom inset.
       bottom: false,
       child: Listener(
         onPointerDown: _handleScreenTap,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 + AppBottomNav.bottomInsetOf(context),
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: <Widget>[
             SegmentedButton<_Mode>(
               segments: const <ButtonSegment<_Mode>>[
