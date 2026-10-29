@@ -83,7 +83,8 @@ class AppBottomNav extends StatelessWidget {
   /// inflates `padding.bottom` by the bar's height, so reading `padding` here
   /// would double-count it.
   static double contentInsetOf(BuildContext context) {
-    return barHeight + MediaQuery.viewPaddingOf(context).bottom;
+    final bottomPadding = View.of(context).viewPadding.bottom / View.of(context).devicePixelRatio;
+    return barHeight + bottomPadding;
   }
 
   /// Index of the destination rendered as the raised circle.
