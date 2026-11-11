@@ -142,6 +142,27 @@ Endpoints that accept a coordinate validate:
 
 **Expiry / dedup:** rows older than **1 hour** are purged. Readings within ~**0.001° (~100 m)** of a new point are replaced (deduplicated).
 
+### 4.5 HealthProfile
+
+One row per user, storing the personal and health details used to personalize the heat-risk assessment (§5.24). Only `age` and `biologicalSex` are required; everything else is optional so the user can share as much or as little as they are comfortable with. Missing values are treated by the model as "unknown", not as "no risk".
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | integer | |
+| `user_id` | integer | FK → users.id, unique |
+| `age` | integer | 1–120 |
+| `biologicalSex` | string | one of `male`, `female`, `other` |
+| `heightCm` | number \| null | 50–250 |
+| `weightKg` | number \| null | 20–300 |
+| `activityLevel` | string \| null | one of `sedentary`, `light`, `moderate`, `active`, `very_active` |
+| `conditions` | array of strings | chronic conditions; see §5.23 for the allowed values |
+| `medications` | array of strings | medication classes; see §5.23 |
+| `lifestyle` | array of strings | behavioural modifiers; see §5.23 |
+| `created_at` | string (ISO 8601) | |
+| `updated_at` | string (ISO 8601) | |
+
+**Expiry / dedup:** none — the profile persists until the user clears it.
+
 ---
 
 ## 5. Endpoints
@@ -1121,6 +1142,212 @@ POST /api/ai/activities
 
 ---
 
+### 5.22 Health Profile — Show
+
+Returns the authenticated user's health profile, or `null` when they have not
+entered one yet.
+
+```
+GET /api/profile/health
+```
+
+**Auth:** required (Bearer token)
+
+**Success — `200` (profile saved):**
+
+```json
+{
+  "profile": {
+    "age": 68,
+    "biologicalSex": "female",
+    "heightCm": 162.5,
+    "weightKg": 61.0,
+    "activityLevel": "light",
+    "conditions": ["cardiovascular", "diabetes"],
+    "medications": ["beta_blockers"],
+    "lifestyle": ["acclimatized"],
+    "updatedAt": "2026-11-11T09:12:00.000000Z"
+  }
+}
+```
+
+**Success — `200` (no profile yet):**
+
+```json
+{ "profile": null }
+```
+
+**Errors:**
+- `401` — `{"message": "Unauthorized."}`
+
+---
+
+### 5.23 Health Profile — Update / Delete
+
+Creates or replaces the authenticated user's health profile. The profile is a
+single row per user, so submitting the form again overwrites the previous
+values. `DELETE` removes it.
+
+```
+PUT /api/profile/health
+DELETE /api/profile/health
+```
+
+**Auth:** required (Bearer token)
+
+**Request body (PUT):**
+
+```json
+{
+  "age": 68,
+  "biologicalSex": "female",
+  "heightCm": 162.5,
+  "weightKg": 61.0,
+  "activityLevel": "light",
+  "conditions": ["cardiovascular", "diabetes"],
+  "medications": ["beta_blockers"],
+  "lifestyle": ["acclimatized"]
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `age` | integer | required — 1–120 |
+| `biologicalSex` | string | required — `male`, `female`, or `other` |
+| `heightCm` | number | optional — 50–250 |
+| `weightKg` | number | optional — 20–300 |
+| `activityLevel` | string | optional — `sedentary`, `light`, `moderate`, `active`, `very_active` |
+| `conditions` | array | optional — max 10, each one of `cardiovascular`, `diabetes`, `respiratory`, `kidney`, `pregnancy`, `neurological`, `obesity` |
+| `medications` | array | optional — max 10, each one of `diuretics`, `beta_blockers`, `anticholinergics`, `antipsychotics`, `stimulants`, `antihistamines` |
+| `lifestyle` | array | optional — max 10, each one of `acclimatized`, `alcohol`, `dehydrated`, `outdoor_worker`, `high_fitness`, `limited_mobility` |
+
+**Success — `200`:**
+
+```json
+{ "profile": { "age": 68, "biologicalSex": "female", "conditions": [], "medications": [], "lifestyle": [], "updatedAt": "2026-11-11T09:12:00.000000Z" } }
+```
+
+**Success — `200` (DELETE):**
+
+```json
+{ "message": "Health profile deleted." }
+```
+
+**Behavior:**
+
+1. The row is matched by the authenticated user, never by an id in the body.
+2. Omitted optional fields are stored as `null` / empty arrays, replacing any
+   previously saved values.
+3. `DELETE` is idempotent — it succeeds even when no profile exists, so the
+   client can clear its local copy unconditionally.
+
+**Errors:**
+- `400` — validation error (`age` or `biologicalSex` missing or out of range, or an unknown option value)
+- `401` — `{"message": "Unauthorized."}`
+
+---
+
+### 5.24 AI Health Risk
+
+Estimates the authenticated user's heat-strain risk by combining their saved
+health profile (§5.22) with the current weather, and returns the numbers the
+client plots plus a written summary.
+
+The profile is read **server-side** from the database rather than from the
+request body, so the client cannot spoof or omit health details. The client
+supplies the weather payloads it already fetched (via §5.1, §5.2, §5.3); the
+server does **not** call Google again.
+
+```
+POST /api/ai/health-risk
+```
+
+**Auth:** required (Bearer token)
+
+**Request body:**
+
+```json
+{
+  "currentConditions": {
+    "temperature": { "degrees": 36.0, "unit": "CELSIUS" },
+    "relativeHumidity": 70
+  },
+  "hourlyForecast": {
+    "forecastHours": [ /* ... */ ]
+  },
+  "dailyForecast": {
+    "forecastDays": [ /* ... */ ]
+  },
+  "previousAssessment": {
+    "riskScore": 40,
+    "riskLevel": "high",
+    "generatedAt": "2026-11-10T09:00:00Z"
+  }
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `currentConditions` | object | required — the raw Google current-conditions payload |
+| `hourlyForecast` | object | optional — the raw Google hourly forecast payload |
+| `dailyForecast` | object | optional — the raw Google daily forecast payload |
+| `previousAssessment` | object \| null | optional — the last assessment the user saw; sent when regenerating so the new answer stays consistent with it |
+
+**Success — `200`:**
+
+```json
+{
+  "riskScore": 62,
+  "riskLevel": "very_high",
+  "thresholdC": 38.0,
+  "thresholdLabel": "Clinical fever threshold",
+  "summary": "Heat strain is likely this afternoon; humidity keeps sweat evaporation low.",
+  "uncertainty": "Humidity is forecast with moderate confidence, and no weight was provided.",
+  "keyFindings": ["Peak risk is between 14:00 and 16:00."],
+  "recommendations": ["Avoid strenuous outdoor work at midday."],
+  "hourly": [
+    {
+      "hourIndex": 0,
+      "hour": 12,
+      "probability": 0.25,
+      "coreTempMedianC": 37.4,
+      "coreTempP10C": 37.1,
+      "coreTempP90C": 37.8
+    }
+  ]
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `riskScore` | integer | 0 (none) – 100 (emergency) |
+| `riskLevel` | string | one of `low`, `moderate`, `high`, `very_high`, `extreme` |
+| `thresholdC` | number | the core-temperature threshold modelled against, in Celsius (35.0–42.0) |
+| `thresholdLabel` | string | a short human-readable name for the threshold |
+| `summary` | string | two to four plain-language sentences |
+| `uncertainty` | string | the largest sources of uncertainty in the estimate |
+| `keyFindings` | array of strings | 2–5 actionable findings |
+| `recommendations` | array of strings | 2–5 concrete actions |
+| `hourly` | array | up to 24 points, sorted by `hourIndex` |
+| `hourly[].hourIndex` | integer | zero-based index of the hour in the supplied forecast — use it as the chart's x value so the axis stays correct across midnight |
+| `hourly[].hour` | integer | hour of day, 0–23 |
+| `hourly[].probability` | number | 0.0–1.0 chance of crossing `thresholdC` during that hour |
+| `hourly[].coreTempMedianC` | number | median estimated core temperature |
+| `hourly[].coreTempP10C` | number | 10th-percentile (optimistic) core temperature |
+| `hourly[].coreTempP90C` | number | 90th-percentile (pessimistic) core temperature |
+
+> The response describes statistical **estimates for awareness, not a diagnosis**.
+> Out-of-range numbers are clamped (score to 0–100, probability to 0.0–1.0),
+> a mis-ordered percentile triple is sorted, and hourly points with an invalid
+> `hour` or `hourIndex` are dropped rather than failing the request.
+
+**Errors:**
+- `400` — validation error (`currentConditions` required), or the user has no saved profile (`{"message": "A health profile is required before generating an assessment."}`)
+- `401` — `{"message": "Unauthorized."}`
+- `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
+
+---
+
 ## 6. Google OAuth Flow
 
 Authentication is handled **server-side**. The client never holds the Google OAuth credentials; it only redirects the browser to the consent screen and later receives a Sanctum token.
@@ -1216,6 +1443,10 @@ The client should:
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
 | POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?}` | `200` `{summary, healthAdvice, articleUrl}` |
 | POST | `/api/ai/activities` | No | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?}` | `200` `{suggestions: [...]}` |
+| GET | `/api/profile/health` | Yes | — | `200` `{profile: {...}\|null}` |
+| PUT | `/api/profile/health` | Yes | `{age, biologicalSex, heightCm?, weightKg?, activityLevel?, conditions?, medications?, lifestyle?}` | `200` `{profile: {...}}` |
+| DELETE | `/api/profile/health` | Yes | — | `200` `{message}` |
+| POST | `/api/ai/health-risk` | Yes | `{currentConditions, hourlyForecast?, dailyForecast?, previousAssessment?}` | `200` `{riskScore, riskLevel, thresholdC, thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | POST | `/api/posts/{id}/comments` | Yes | `{content}` | `201` comment + user / `401` / `404` |
