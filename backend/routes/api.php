@@ -1,10 +1,12 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AiActivityController;
+use App\Http\Controllers\AiHealthRiskController;
 use App\Http\Controllers\AiSummaryController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\GoogleOAuthController;
+use App\Http\Controllers\HealthProfileController;
 use App\Http\Controllers\HeatLocationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\WeatherController;
@@ -47,6 +49,10 @@ Route::middleware('throttle:api')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/profile', [AuthController::class, 'profile']);
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/profile/health', [HealthProfileController::class, 'show']);
+        Route::put('/profile/health', [HealthProfileController::class, 'update']);
+        Route::delete('/profile/health', [HealthProfileController::class, 'destroy']);
+        Route::post('/ai/health-risk', [AiHealthRiskController::class, 'assess']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::delete('/posts/{id}', [PostController::class, 'destroy']);
         Route::post('/posts/{id}/comments', [CommentController::class, 'store']);
