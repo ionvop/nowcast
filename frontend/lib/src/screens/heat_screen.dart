@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../api/api_client.dart';
 import '../models/forecast_day.dart';
@@ -10,6 +11,7 @@ import '../utils/geolocation.dart';
 import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/fade_slide_in.dart';
+import '../widgets/health_risk_section.dart';
 import '../widgets/loading_overlay.dart';
 import 'settings_screen.dart';
 
@@ -39,6 +41,13 @@ class _HeatScreenState extends State<HeatScreen> {
 
   Forecast? _forecast;
   DailyForecast? _dailyForecast;
+
+  /// The raw payloads, kept so the health-risk section can forward the full
+  /// JSON to the backend without dropping fields the typed models do not
+  /// parse. `_weatherJson` is null when the weather request failed.
+  Map<String, dynamic>? _weatherJson;
+  Map<String, dynamic>? _forecastJson;
+  Map<String, dynamic>? _dailyJson;
 
   @override
   void initState() {
@@ -73,20 +82,27 @@ class _HeatScreenState extends State<HeatScreen> {
       ]);
       if (!mounted) return;
 
-      final forecast = Forecast.fromJson(
-        results[0] is Map<String, dynamic>
-            ? results[0] as Map<String, dynamic>
-            : <String, dynamic>{},
-      );
-      final dailyForecast = DailyForecast.fromJson(
-        results[1] is Map<String, dynamic>
-            ? results[1] as Map<String, dynamic>
-            : <String, dynamic>{},
-      );
+      final forecastMap = results[0] is Map<String, dynamic>
+          ? results[0] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final dailyMap = results[1] is Map<String, dynamic>
+          ? results[1] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final forecast = Forecast.fromJson(forecastMap);
+      final dailyForecast = DailyForecast.fromJson(dailyMap);
+
+      // The health-risk section needs current conditions too. Fetch them
+      // separately so a failure here only disables that section instead of
+      // breaking the charts above it.
+      final weatherJson = await _loadWeather(position);
+      if (!mounted) return;
 
       setState(() {
         _forecast = forecast;
         _dailyForecast = dailyForecast;
+        _forecastJson = forecastMap;
+        _dailyJson = dailyMap;
+        _weatherJson = weatherJson;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -95,6 +111,22 @@ class _HeatScreenState extends State<HeatScreen> {
       _fail(e.message);
     } on Exception {
       _fail('Something went wrong while loading the heat data.');
+    }
+  }
+
+  /// Fetches the current conditions, returning null when the request fails.
+  ///
+  /// This is deliberately non-fatal: the heat charts do not need current
+  /// conditions, so a failure here should only hide the health-risk section.
+  Future<Map<String, dynamic>?> _loadWeather(Position position) async {
+    try {
+      final json = await _api.post('weather', {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      });
+      return json is Map<String, dynamic> ? json : null;
+    } on Exception {
+      return null;
     }
   }
 
@@ -153,6 +185,9 @@ class _HeatScreenState extends State<HeatScreen> {
     return _HeatChart(
       hours: hasHourly ? forecast.hours : const <ForecastHour>[],
       days: hasDaily ? dailyForecast.days : const <ForecastDay>[],
+      weatherJson: _weatherJson,
+      forecastJson: _forecastJson,
+      dailyJson: _dailyJson,
     );
   }
 }
@@ -161,10 +196,22 @@ class _HeatScreenState extends State<HeatScreen> {
 enum _Mode { hourly, daily }
 
 class _HeatChart extends StatefulWidget {
-  const _HeatChart({required this.hours, required this.days});
+  const _HeatChart({
+    required this.hours,
+    required this.days,
+    this.weatherJson,
+    this.forecastJson,
+    this.dailyJson,
+  });
 
   final List<ForecastHour> hours;
   final List<ForecastDay> days;
+
+  /// The raw payloads forwarded to the health-risk section. Null when the
+  /// corresponding request failed.
+  final Map<String, dynamic>? weatherJson;
+  final Map<String, dynamic>? forecastJson;
+  final Map<String, dynamic>? dailyJson;
 
   @override
   State<_HeatChart> createState() => _HeatChartState();
@@ -295,6 +342,18 @@ class _HeatChartState extends State<_HeatChart> {
             ),
             const SizedBox(height: 12),
             _Legend(series: <Object>[_uvSeries]),
+            // The health-risk section is independent of the hourly/daily
+            // toggle above: it always shows the same assessment.
+            if (widget.weatherJson != null) ...<Widget>[
+              const SizedBox(height: 24),
+              FadeSlideIn(
+                child: HealthRiskSection(
+                  currentConditions: widget.weatherJson!,
+                  hourlyForecast: widget.forecastJson,
+                  dailyForecast: widget.dailyJson,
+                ),
+              ),
+            ],
           ],
         ),
       ),
