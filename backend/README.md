@@ -66,6 +66,8 @@ Copy `.env.example` to `.env` and fill in the Google credentials:
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI (web page URL or native custom scheme / universal link) |
 | `GOOGLE_NATIVE_SCHEME` | Native custom scheme for OAuth deep links (default: `nowcast`) |
+| `OPENROUTER_API_KEY` | OpenRouter key used by the AI endpoints (`/api/ai/*`) |
+| `OPENROUTER_MODEL` | OpenRouter model id (default: `deepseek/deepseek-v4.1-flash`) |
 
 ---
 
@@ -102,6 +104,10 @@ Copy `.env.example` to `.env` and fill in the Google credentials:
 | POST | `/api/posts` | Yes | Create a post |
 | DELETE | `/api/posts/{id}` | Yes | Delete a post (owner only) |
 | GET | `/api/profile` | Yes | Current user's profile |
+| GET | `/api/profile/health` | Yes | Current user's health profile (or `null`) |
+| PUT | `/api/profile/health` | Yes | Create or replace the health profile |
+| DELETE | `/api/profile/health` | Yes | Delete the health profile |
+| POST | `/api/ai/health-risk` | Yes | Personalized heat-risk assessment from the saved profile + weather |
 | POST | `/api/logout` | Yes | Revoke the current token |
 | GET | `/api/auth/google/redirect` | No | Redirect to the Google consent screen |
 | GET | `/api/auth/google/callback` | No | OAuth callback (issues a Sanctum token) |
