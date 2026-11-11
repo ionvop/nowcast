@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
 import '../overlay/activities_bubble_controller.dart';
+import 'ai_sign_in_prompt.dart';
 import 'ai_summary_section.dart';
-import 'app_card.dart';
 import 'bubble_toggle_card.dart';
-import 'sign_in_button.dart';
 
 /// The Home tab's AI block: the AI summary card plus, on Android, the toggle
 /// for the floating AI activities bubble.
@@ -52,7 +51,7 @@ class AiFeaturesSection extends StatelessWidget {
       listenable: auth,
       builder: (context, _) {
         if (!auth.isAuthenticated) {
-          return _AiSignInPrompt(auth: auth);
+          return AiSignInPrompt(auth: auth);
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,61 +74,4 @@ class AiFeaturesSection extends StatelessWidget {
   }
 }
 
-/// Card prompting a signed-out user to sign in before using the AI features.
-class _AiSignInPrompt extends StatelessWidget {
-  const _AiSignInPrompt({required this.auth});
 
-  final AuthController auth;
-
-  Future<void> _signIn(BuildContext context) async {
-    try {
-      await auth.signIn();
-    } on Exception {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the sign-in page.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Icon(
-                  Icons.auto_awesome,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'AI features',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Sign in with Google to generate AI summaries and use the '
-              'floating AI bubble.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            SignInButton(onPressed: () => _signIn(context)),
-          ],
-        ),
-      ),
-    );
-  }
-}
