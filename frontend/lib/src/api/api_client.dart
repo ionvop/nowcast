@@ -141,6 +141,33 @@ class ApiClient {
     return _decode(response);
   }
 
+  /// PUTs [body] to `[baseUrl]/[path]` and returns the decoded JSON.
+  ///
+  /// When [token] is provided it is attached as a `Bearer` authorization
+  /// header. Throws [NetworkException] on transport errors and [ApiException]
+  /// on non-2xx responses.
+  Future<dynamic> put(String path, Map<String, dynamic> body,
+      {String? token}) async {
+    final uri = Uri.parse('$_baseUrl/$path');
+    final http.Response response;
+    try {
+      response = await _client
+          .put(
+            uri,
+            headers: _headers(token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkException(timeoutMessage);
+    } on Exception {
+      throw const NetworkException(
+        'Could not reach the server. Check your connection and try again.',
+      );
+    }
+    return _decode(response);
+  }
+
   /// DELETEs `[baseUrl]/[path]` and returns the decoded JSON.
   ///
   /// When [token] is provided it is attached as a `Bearer` authorization
