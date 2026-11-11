@@ -123,14 +123,30 @@ Map<String, dynamic> dailyJson(int count) {
   };
 }
 
+/// Builds a raw current-conditions response for the health-risk section.
+Map<String, dynamic> weatherJson() {
+  return <String, dynamic>{
+    'temperature': <String, dynamic>{'degrees': 33.0, 'unit': 'CELSIUS'},
+    'relativeHumidity': 70,
+  };
+}
+
 /// Returns an [ApiClient] whose `post` returns the hourly response for the
-/// `forecast` path and the daily response for the `forecast/daily` path.
+/// `forecast` path, the daily response for the `forecast/daily` path, and the
+/// current conditions for the `weather` path.
 ApiClient buildApi({int hours = 6, int days = 7}) {
   final mock = MockClient((http.Request request) async {
     final path = request.url.path;
     if (path.endsWith('/forecast/daily')) {
       return http.Response(
         jsonEncode(dailyJson(days)),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    }
+    if (path.endsWith('/weather')) {
+      return http.Response(
+        jsonEncode(weatherJson()),
         200,
         headers: <String, String>{'content-type': 'application/json'},
       );
