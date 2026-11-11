@@ -32,3 +32,30 @@ String formatTimestamp(DateTime time, {required bool use24Hour}) {
   final period = local.hour < 12 ? 'AM' : 'PM';
   return '$hour:$minute $period';
 }
+
+/// Month abbreviations used by [formatDateTime].
+const List<String> _months = <String>[
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// Formats a [DateTime] as a date and clock time, e.g. `11 Nov 2026, 09:12`.
+///
+/// The time portion honors the user's time-format preference via
+/// [formatTimestamp].
+String formatDateTime(DateTime time, {required bool use24Hour}) {
+  final local = time.toLocal();
+  final month = _months[local.month - 1];
+  final clock = formatTimestamp(local, use24Hour: use24Hour);
+  return '${local.day} $month ${local.year}, $clock';
+}
