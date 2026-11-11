@@ -4,6 +4,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'src/auth/auth_controller.dart';
 import 'src/overlay/activities_bubble_controller.dart';
 import 'src/overlay/overlay_main.dart' show runOverlayApp;
+import 'src/services/health_profile_controller.dart';
 import 'src/services/heat_alert_controller.dart';
 import 'src/services/heat_alert_service.dart';
 import 'src/services/settings_controller.dart';
@@ -31,10 +32,12 @@ Future<void> main() async {
   AppLifecycleListener(onResume: ActivitiesBubbleController.instance.onAppResumed);
   // The AI features are gated to signed-in users, so a sign-out must also tear
   // down the floating bubble — otherwise it would keep running for a
-  // logged-out user.
+  // logged-out user. The health profile is dropped for the same reason: it is
+  // personal data that must not linger in memory for the next session.
   authController.addListener(() {
     if (!authController.isAuthenticated) {
       ActivitiesBubbleController.instance.hideBubble();
+      healthProfileController.reset();
     }
   });
   runApp(const NowcastApp());
