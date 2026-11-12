@@ -25,6 +25,15 @@ return [
     'openrouter' => [
         'api_key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'openrouter/free'),
+
+        /*
+        | How long a single OpenRouter completion may take, in seconds.
+        |
+        | Every AI request uses one attempt with this budget (no retries), so
+        | this is also the worst case the client waits on the server. Keep it
+        | comfortably below the Flutter client's 60 second AI deadline.
+        */
+        'timeout' => (int) env('OPENROUTER_TIMEOUT', 30),
     ],
 
     'postmark' => [
