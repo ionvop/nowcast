@@ -1059,6 +1059,11 @@ POST /api/ai/summary
 - `400` — validation error (`currentConditions` required)
 - `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
 
+**Timing:** the server makes a single OpenRouter attempt bounded by
+`OPENROUTER_TIMEOUT` seconds (default **30**), and does not retry. Clients
+should allow at least **60 seconds** for this call so the round trip and the
+server-side 30s budget both fit.
+
 ---
 
 ### 5.21 AI Activities
@@ -1139,6 +1144,10 @@ POST /api/ai/activities
 **Errors:**
 - `400` — validation error (`currentConditions`, `latitude`, or `longitude` required)
 - `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
+
+**Timing:** same budget as §5.20 — one OpenRouter attempt bounded by
+`OPENROUTER_TIMEOUT` seconds (default **30**), no retries. Allow at least
+**60 seconds** client-side.
 
 ---
 
@@ -1345,6 +1354,11 @@ POST /api/ai/health-risk
 - `400` — validation error (`currentConditions` required), or the user has no saved profile (`{"message": "A health profile is required before generating an assessment."}`)
 - `401` — `{"message": "Unauthorized."}`
 - `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
+
+**Timing:** this is the heaviest prompt, but it shares the same budget as
+§5.20 and §5.21 — one OpenRouter attempt bounded by `OPENROUTER_TIMEOUT`
+seconds (default **30**), no retries. The client should allow at least
+**60 seconds**; the app's `Retry` action covers transient failures.
 
 ---
 
