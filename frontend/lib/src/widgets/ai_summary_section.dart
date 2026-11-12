@@ -73,6 +73,9 @@ class _AiSummarySectionState extends State<AiSummarySection> {
             'hourlyForecast': widget.hourlyForecast,
           if (widget.dailyForecast != null) 'dailyForecast': widget.dailyForecast,
         },
+        // The server allows OpenRouter up to 30s, so this call needs more
+        // headroom than the client-wide default.
+        timeout: ApiClient.aiTimeout,
       );
       if (!mounted) return;
       final summary = json is Map<String, dynamic>
