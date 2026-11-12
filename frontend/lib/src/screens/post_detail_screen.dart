@@ -357,6 +357,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final user = post.user;
     final time = post.createdAt;
 
+    // This is a pushed route, not a shell tab, so nothing above it reserves
+    // the system navigation bar inset — the SafeArea does it here.
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
