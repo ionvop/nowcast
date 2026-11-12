@@ -25,6 +25,12 @@ class OpenRouterService
     protected const COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
     /**
+     * The fallback per-attempt timeout, in seconds, used when configuration
+     * does not supply one.
+     */
+    protected const DEFAULT_TIMEOUT = 30;
+
+    /**
      * The keys the completion must return.
      */
     protected const REQUIRED_FIELDS = ['summary', 'healthAdvice', 'articleUrl'];
@@ -180,34 +186,45 @@ class OpenRouterService
             $previousAssessment,
         );
 
-        // This prompt is heavier than the summary/activities ones, so trade the
-        // retry for a longer single attempt: 25s still lands inside the
-        // Flutter client's 30s deadline, whereas 20s x 2 attempts would not.
-        return $this->normalizeHealthRisk($this->completions($payload, timeout: 25, retries: 0));
+        // This prompt is heavier than the summary/activities ones, but it
+        // shares their budget: a single attempt bounded by the configured
+        // timeout, so it always lands inside the client's AI deadline.
+        return $this->normalizeHealthRisk($this->completions($payload));
     }
 
     /**
      * Send a chat-completions request and return the decoded model output.
      *
+     * Every AI feature shares one budget: a single attempt bounded by the
+     * configured timeout (30s by default). Retries are deliberately not used,
+     * because a second 30s attempt would exceed the Flutter client's 60s AI
+     * deadline and the user would see a client-side timeout instead of the
+     * error message below. The client's own Retry action covers transient
+     * upstream failures.
+     *
      * @param  array<string, mixed>  $payload  The request body.
-     * @param  int  $timeout  Per-attempt timeout in seconds.
+     * @param  int|null  $timeout  Per-attempt timeout in seconds; defaults to the configured value.
      * @param  int  $retries  How many times to retry a failed attempt.
      * @return array<string, mixed>
      *
      * @throws OpenRouterApiException When OpenRouter is unreachable, returns an
      *                                error, or the model output is malformed.
      */
-    protected function completions(array $payload, int $timeout = 20, int $retries = 1): array
+    protected function completions(array $payload, ?int $timeout = null, int $retries = 0): array
     {
+        $seconds = $timeout ?? $this->timeout();
+
+        $request = Http::connectTimeout($seconds)
+            ->timeout($seconds)
+            ->withToken($this->apiKey())
+            ->withHeaders(['Accept' => 'application/json']);
+
+        if ($retries > 0) {
+            $request = $request->retry($retries, 200);
+        }
+
         try {
-            // Keep the total worst case (timeout x attempts) inside the
-            // client's 30s deadline so the app receives a real error message
-            // instead of timing out on its own.
-            $response = Http::timeout($timeout)
-                ->retry($retries, 200)
-                ->withToken($this->apiKey())
-                ->withHeaders(['Accept' => 'application/json'])
-                ->post(self::COMPLETIONS_URL, $payload);
+            $response = $request->post(self::COMPLETIONS_URL, $payload);
         } catch (ConnectionException|RequestException) {
             throw new OpenRouterApiException('AI service is currently unreachable. Please try again later.');
         }
@@ -922,5 +939,22 @@ PROMPT,
     protected function model(): string
     {
         return (string) config('services.openrouter.model', 'openrouter/free');
+    }
+
+    /**
+     * Resolve the per-attempt timeout, in seconds, from configuration.
+     *
+     * Non-numeric and non-positive values fall back to [DEFAULT_TIMEOUT] so a
+     * misconfigured environment can never produce an unbounded request.
+     */
+    protected function timeout(): int
+    {
+        $timeout = config('services.openrouter.timeout', self::DEFAULT_TIMEOUT);
+
+        if (! is_numeric($timeout) || (int) $timeout < 1) {
+            return self::DEFAULT_TIMEOUT;
+        }
+
+        return (int) $timeout;
     }
 }
