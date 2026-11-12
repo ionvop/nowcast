@@ -171,8 +171,9 @@ class _HealthDetailsScreenState extends State<HealthDetailsScreen> {
             ),
         ],
       ),
+      // This is a pushed route, not a shell tab, so nothing above it reserves
+      // the system navigation bar inset — the SafeArea does it here.
       body: SafeArea(
-        bottom: false,
         child: Form(
           key: _formKey,
           child: ListView(
