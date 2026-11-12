@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 
 beforeEach(function (): void {
     config()->set('services.openrouter.api_key', 'test-openrouter-key');
-    config()->set('services.openrouter.model', 'deepseek/deepseek-v4.1-flash');
+    config()->set('services.openrouter.model', 'openrouter/free');
 });
 
 /**
@@ -125,7 +125,7 @@ test('ai health risk sends the stored profile and a strict schema', function ():
 
         return $request->url() === 'https://openrouter.ai/api/v1/chat/completions'
             && $request->hasHeader('Authorization', 'Bearer test-openrouter-key')
-            && $body['model'] === 'deepseek/deepseek-v4.1-flash'
+            && $body['model'] === 'openrouter/free'
             && $body['response_format']['type'] === 'json_schema'
             && $schema['strict'] === true
             && $schema['schema']['additionalProperties'] === false
