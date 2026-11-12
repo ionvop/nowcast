@@ -262,4 +262,27 @@ void main() {
 
     expect(api.deletes, 0);
   });
+
+  testWidgets('reserves the system navigation bar inset', (tester) async {
+    // This screen is a pushed route, so it must inset its own bottom edge;
+    // otherwise the last field and the Save button sit under the system
+    // navigation bar.
+    useTallViewport(tester);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.reset);
+
+    final api = RecordingProfileApi();
+    final controller = api.build();
+
+    await tester.pumpWidget(wrap(controller));
+    await tester.pumpAndSettle();
+
+    final listRect = tester.getRect(find.byType(ListView));
+    expect(
+      listRect.bottom,
+      moreOrLessEquals(2400 - 34, epsilon: 0.5),
+      reason: 'The form must stop above the system navigation bar.',
+    );
+  });
 }
