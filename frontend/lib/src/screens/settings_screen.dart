@@ -18,190 +18,194 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListenableBuilder(
-        listenable: settingsController,
-        builder: (context, _) {
-          final darkMode = settingsController.isDarkMode;
-          final is24Hour = settingsController.is24Hour;
-          final vibration = settingsController.isVibrationEnabled;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: <Widget>[
-              FadeSlideIn(
-                child: AppCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(
-                          Icons.dark_mode_outlined,
-                          color: AppTheme.seed,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                'Dark mode',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Use a dark color scheme for the app.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
+      // This is a pushed route, not a shell tab, so nothing above it reserves
+      // the system navigation bar inset — the SafeArea does it here.
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: settingsController,
+          builder: (context, _) {
+            final darkMode = settingsController.isDarkMode;
+            final is24Hour = settingsController.is24Hour;
+            final vibration = settingsController.isVibrationEnabled;
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                FadeSlideIn(
+                  child: AppCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.dark_mode_outlined,
+                            color: AppTheme.seed,
                           ),
-                        ),
-                        Switch(
-                          value: darkMode,
-                          onChanged: (value) =>
-                              settingsController.setDarkMode(value),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              FadeSlideIn(
-                child: AppCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(Icons.access_time, color: AppTheme.seed),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                '24-hour time',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Display times in 24-hour (military) format.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Dark mode',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Use a dark color scheme for the app.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Switch(
-                          value: is24Hour,
-                          onChanged: (value) =>
-                              settingsController.set24Hour(value),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              FadeSlideIn(
-                child: AppCard(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(Icons.phone, color: AppTheme.seed),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                'Vibration',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Vibrate the phone when a heat danger alert '
-                                'appears.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
+                          Switch(
+                            value: darkMode,
+                            onChanged: (value) =>
+                                settingsController.setDarkMode(value),
                           ),
-                        ),
-                        Switch(
-                          value: vibration,
-                          onChanged: (value) =>
-                              settingsController.setVibrationEnabled(value),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              FadeSlideIn(child: AppCard(child: _EmergencyNumberCard())),
-              const SizedBox(height: 12),
-              FadeSlideIn(
-                child: AppCard(
-                  onTap: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const PrivacyPolicyScreen(),
+                        ],
                       ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(
-                          Icons.privacy_tip_outlined,
-                          color: AppTheme.seed,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                'Privacy Policy',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Read how your data is collected and used.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right),
-                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+                FadeSlideIn(
+                  child: AppCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(Icons.access_time, color: AppTheme.seed),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  '24-hour time',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Display times in 24-hour (military) format.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: is24Hour,
+                            onChanged: (value) =>
+                                settingsController.set24Hour(value),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                FadeSlideIn(
+                  child: AppCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(Icons.phone, color: AppTheme.seed),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Vibration',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Vibrate the phone when a heat danger alert '
+                                  'appears.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: vibration,
+                            onChanged: (value) =>
+                                settingsController.setVibrationEnabled(value),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                FadeSlideIn(child: AppCard(child: _EmergencyNumberCard())),
+                const SizedBox(height: 12),
+                FadeSlideIn(
+                  child: AppCard(
+                    onTap: () {
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PrivacyPolicyScreen(),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.privacy_tip_outlined,
+                            color: AppTheme.seed,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  'Privacy Policy',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Read how your data is collected and used.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
