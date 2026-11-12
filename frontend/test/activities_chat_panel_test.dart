@@ -293,15 +293,17 @@ void main() {
         return http.Response('{"message":"Not found."}', 404);
       });
 
-      await tester.pumpWidget(
-        _wrap(_api(hanging), loadTimeout: const Duration(seconds: 30)),
-      );
+      // Injected shorter than ApiClient.aiTimeout (60s) so the panel's own
+      // whole-chain deadline is the one that fires.
+      const deadline = Duration(seconds: 30);
+
+      await tester.pumpWidget(_wrap(_api(hanging), loadTimeout: deadline));
       await tester.pump();
 
       // Still loading before the deadline.
       expect(find.text('Finding things to do near you…'), findsOneWidget);
 
-      await tester.pump(const Duration(seconds: 31));
+      await tester.pump(deadline + const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
       expect(
@@ -310,6 +312,10 @@ void main() {
       );
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('Finding things to do near you…'), findsNothing);
+
+      // Let the AI request's own 60s timer expire so no timer is left pending.
+      await tester.pump(ApiClient.aiTimeout + const Duration(seconds: 1));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('shows a retryable error when location is unavailable',
@@ -387,10 +393,12 @@ void main() {
       });
 
       await tester.pumpWidget(
-        _wrap(_api(flaky), loadTimeout: const Duration(seconds: 30)),
+        _wrap(_api(flaky), loadTimeout: ActivitiesChatPanel.defaultLoadTimeout),
       );
       await tester.pump();
-      await tester.pump(const Duration(seconds: 31));
+      await tester.pump(
+        ActivitiesChatPanel.defaultLoadTimeout + const Duration(seconds: 1),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Retry'), findsOneWidget);
@@ -466,8 +474,26 @@ void main() {
       expect(find.text('Finding things to do near you…'), findsOneWidget);
 
       // Let the in-flight attempt time out so no timers are left pending.
-      await tester.pump(const Duration(seconds: 31));
+      await tester.pump(
+        ActivitiesSuggestionsController.defaultLoadTimeout +
+            const Duration(seconds: 1),
+      );
       await tester.pumpAndSettle();
+    });
+
+    test('the whole-chain load deadline leaves room for a 60s AI call', () {
+      expect(
+        ActivitiesSuggestionsController.defaultLoadTimeout,
+        const Duration(seconds: 90),
+      );
+      expect(
+        ActivitiesChatPanel.defaultLoadTimeout,
+        ActivitiesSuggestionsController.defaultLoadTimeout,
+      );
+      expect(
+        ActivitiesSuggestionsController.defaultLoadTimeout,
+        greaterThan(ApiClient.aiTimeout),
+      );
     });
 
     testWidgets('regenerate keeps the old list and then replaces it',
