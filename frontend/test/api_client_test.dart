@@ -87,6 +87,33 @@ void main() {
     test('defaults to a 30 second timeout', () {
       expect(ApiClient.defaultTimeout, const Duration(seconds: 30));
     });
+
+    test('gives AI requests a 60 second timeout', () {
+      expect(ApiClient.aiTimeout, const Duration(seconds: 60));
+    });
+
+    test('a per-request timeout overrides the client default', () async {
+      // Responds well after the client-wide default (20ms) but well inside the
+      // per-request override, so only a working override lets it succeed.
+      final slow = MockClient((http.Request request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        return http.Response(
+          jsonEncode(<String, dynamic>{'ok': true}),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      final api = _api(slow, timeout: const Duration(milliseconds: 20));
+
+      final json = await api.post(
+        'ai/summary',
+        <String, dynamic>{},
+        timeout: const Duration(seconds: 60),
+      );
+
+      expect(json, <String, dynamic>{'ok': true});
+    });
   });
 
   group('ApiClient errors', () {
