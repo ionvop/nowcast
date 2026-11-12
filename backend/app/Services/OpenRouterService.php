@@ -282,6 +282,9 @@ PROMPT,
             'messages' => [$system, $user],
             'temperature' => 0.3,
             'reasoning_effort' => 'none',
+            'provider' => [
+                'require_parameters' => true
+            ],
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
@@ -388,6 +391,9 @@ PROMPT,
             'messages' => [$system, $user],
             'temperature' => 0.3,
             'reasoning_effort' => 'none',
+            'provider' => [
+                'require_parameters' => true
+            ],
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
@@ -628,6 +634,9 @@ PROMPT,
             'messages' => [$system, $user],
             'temperature' => 0.2,
             'reasoning_effort' => 'none',
+            'provider' => [
+                'require_parameters' => true
+            ],
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
@@ -912,6 +921,6 @@ PROMPT,
      */
     protected function model(): string
     {
-        return (string) config('services.openrouter.model', 'deepseek/deepseek-v4.1-flash');
+        return (string) config('services.openrouter.model', 'openrouter/free');
     }
 }
