@@ -67,7 +67,7 @@ Copy `.env.example` to `.env` and fill in the Google credentials:
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI (web page URL or native custom scheme / universal link) |
 | `GOOGLE_NATIVE_SCHEME` | Native custom scheme for OAuth deep links (default: `nowcast`) |
 | `OPENROUTER_API_KEY` | OpenRouter key used by the AI endpoints (`/api/ai/*`) |
-| `OPENROUTER_MODEL` | OpenRouter model id (default: `deepseek/deepseek-v4.1-flash`) |
+| `OPENROUTER_MODEL` | OpenRouter model id (default: `openrouter/free`) |
 
 ---
 
