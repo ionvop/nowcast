@@ -99,6 +99,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
       appBar: AppBar(title: const Text('New Post')),
       body: Stack(
         children: <Widget>[
+          // This is a pushed route, not a shell tab, so nothing above it
+          // reserves the system navigation bar inset — the SafeArea does it.
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
