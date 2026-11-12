@@ -42,34 +42,54 @@ class ApiClient {
 
   /// How long a single request may take before it is abandoned.
   ///
-  /// The AI endpoints can be slow (the server itself waits up to 30s on the
-  /// upstream LLM), so this is deliberately generous. Without it a hung socket
-  /// leaves the caller waiting forever.
+  /// Without a bound a hung socket leaves the caller waiting forever. It is
+  /// deliberately tighter than [aiTimeout] so non-AI endpoints — weather,
+  /// forecasts, posts, the profile — fail fast and the UI can offer a retry.
   static const Duration defaultTimeout = Duration(seconds: 30);
 
-  /// The message surfaced when a request exceeds [timeout].
+  /// How long an AI request may take before it is abandoned.
+  ///
+  /// The AI endpoints (`ai/summary`, `ai/activities`, `ai/health-risk`) are
+  /// slow: the server itself allows OpenRouter up to 30 seconds, and the
+  /// payloads have to travel there and back. The extra headroom leaves room
+  /// for that round trip so the app receives the server's own error message
+  /// instead of timing out first. Pass it per call:
+  ///
+  /// ```dart
+  /// await api.post('ai/summary', body, timeout: ApiClient.aiTimeout);
+  /// ```
+  static const Duration aiTimeout = Duration(seconds: 60);
+
+  /// The message surfaced when a request exceeds its timeout.
   static const String timeoutMessage =
       'The request timed out. Check your connection and try again.';
 
   /// How long a single request may take before it is abandoned.
+  ///
+  /// Applies to every request that does not pass its own `timeout`.
   final Duration timeout;
 
   final http.Client _client;
   final String _baseUrl;
 
+  /// Resolves the deadline for one request: the per-call [timeout] when given,
+  /// otherwise the client-wide default.
+  Duration _deadline(Duration? timeout) => timeout ?? this.timeout;
+
   /// GETs `[baseUrl]/[path]` and returns the decoded JSON.
   ///
   /// When [token] is non-null it is attached as a `Bearer` authorization
-  /// header. Throws [NetworkException] on transport errors and [ApiException]
-  /// on non-2xx responses (a 401 surfaces as [ApiException] with
+  /// header. [timeout] overrides the client-wide deadline for this request
+  /// only (see [aiTimeout]). Throws [NetworkException] on transport errors and
+  /// [ApiException] on non-2xx responses (a 401 surfaces as [ApiException] with
   /// [ApiException.statusCode] == 401).
-  Future<dynamic> get(String path, {String? token}) async {
+  Future<dynamic> get(String path, {String? token, Duration? timeout}) async {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
       response = await _client
           .get(uri, headers: _headers(token: token))
-          .timeout(timeout);
+          .timeout(_deadline(timeout));
     } on TimeoutException {
       throw const NetworkException(timeoutMessage);
     } on Exception {
@@ -85,10 +105,11 @@ class ApiClient {
   /// Unlike [get], this does not attempt to decode the body as JSON — it is
   /// intended for binary payloads such as weather icon SVGs. [query] is
   /// appended as query parameters. When [token] is non-null it is attached as
-  /// a `Bearer` authorization header. Throws [NetworkException] on transport
+  /// a `Bearer` authorization header. [timeout] overrides the client-wide
+  /// deadline for this request only. Throws [NetworkException] on transport
   /// errors and [ApiException] on non-2xx responses.
   Future<Uint8List> getBytes(String path,
-      {Map<String, String>? query, String? token}) async {
+      {Map<String, String>? query, String? token, Duration? timeout}) async {
     var uri = Uri.parse('$_baseUrl/$path');
     if (query != null && query.isNotEmpty) {
       uri = uri.replace(queryParameters: query);
@@ -97,7 +118,7 @@ class ApiClient {
     try {
       response = await _client
           .get(uri, headers: _headers(token: token))
-          .timeout(timeout);
+          .timeout(_deadline(timeout));
     } on TimeoutException {
       throw const NetworkException(timeoutMessage);
     } on Exception {
@@ -117,10 +138,12 @@ class ApiClient {
   /// POSTs [body] to `[baseUrl]/[path]` and returns the decoded JSON.
   ///
   /// When [token] is provided it is attached as a `Bearer` authorization
-  /// header. Throws [NetworkException] on transport errors and [ApiException]
-  /// on non-2xx responses.
+  /// header. [timeout] overrides the client-wide deadline for this request
+  /// only — the AI endpoints should pass [aiTimeout]. Throws
+  /// [NetworkException] on transport errors and [ApiException] on non-2xx
+  /// responses.
   Future<dynamic> post(String path, Map<String, dynamic> body,
-      {String? token}) async {
+      {String? token, Duration? timeout}) async {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
@@ -130,7 +153,7 @@ class ApiClient {
             headers: _headers(token: token),
             body: jsonEncode(body),
           )
-          .timeout(timeout);
+          .timeout(_deadline(timeout));
     } on TimeoutException {
       throw const NetworkException(timeoutMessage);
     } on Exception {
@@ -144,10 +167,11 @@ class ApiClient {
   /// PUTs [body] to `[baseUrl]/[path]` and returns the decoded JSON.
   ///
   /// When [token] is provided it is attached as a `Bearer` authorization
-  /// header. Throws [NetworkException] on transport errors and [ApiException]
-  /// on non-2xx responses.
+  /// header. [timeout] overrides the client-wide deadline for this request
+  /// only. Throws [NetworkException] on transport errors and [ApiException] on
+  /// non-2xx responses.
   Future<dynamic> put(String path, Map<String, dynamic> body,
-      {String? token}) async {
+      {String? token, Duration? timeout}) async {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
@@ -157,7 +181,7 @@ class ApiClient {
             headers: _headers(token: token),
             body: jsonEncode(body),
           )
-          .timeout(timeout);
+          .timeout(_deadline(timeout));
     } on TimeoutException {
       throw const NetworkException(timeoutMessage);
     } on Exception {
@@ -171,15 +195,16 @@ class ApiClient {
   /// DELETEs `[baseUrl]/[path]` and returns the decoded JSON.
   ///
   /// When [token] is provided it is attached as a `Bearer` authorization
-  /// header. Throws [NetworkException] on transport errors and [ApiException]
-  /// on non-2xx responses.
-  Future<dynamic> delete(String path, {String? token}) async {
+  /// header. [timeout] overrides the client-wide deadline for this request
+  /// only. Throws [NetworkException] on transport errors and [ApiException] on
+  /// non-2xx responses.
+  Future<dynamic> delete(String path, {String? token, Duration? timeout}) async {
     final uri = Uri.parse('$_baseUrl/$path');
     final http.Response response;
     try {
       response = await _client
           .delete(uri, headers: _headers(token: token))
-          .timeout(timeout);
+          .timeout(_deadline(timeout));
     } on TimeoutException {
       throw const NetworkException(timeoutMessage);
     } on Exception {
