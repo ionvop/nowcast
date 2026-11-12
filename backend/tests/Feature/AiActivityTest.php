@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 
 beforeEach(function (): void {
     config()->set('services.openrouter.api_key', 'test-openrouter-key');
-    config()->set('services.openrouter.model', 'deepseek/deepseek-v4-flash-0731:online');
+    config()->set('services.openrouter.model', 'openrouter/free');
 });
 
 test('ai activities returns weather-aware suggestions', function (): void {
@@ -73,7 +73,7 @@ test('ai activities returns weather-aware suggestions', function (): void {
 
         return $request->url() === 'https://openrouter.ai/api/v1/chat/completions'
             && $request->hasHeader('Authorization', 'Bearer test-openrouter-key')
-            && $body['model'] === 'deepseek/deepseek-v4-flash-0731:online'
+            && $body['model'] === 'openrouter/free'
             && $body['response_format']['type'] === 'json_schema'
             && $body['response_format']['json_schema']['strict'] === true
             && $body['response_format']['json_schema']['schema']['required'] === ['suggestions']
