@@ -55,7 +55,13 @@ class ActivitiesSuggestionsController extends ChangeNotifier {
 
   /// How long the whole load (location + weather + forecasts + AI) may take
   /// before the attempt gives up and offers a retry.
-  static const Duration defaultLoadTimeout = Duration(seconds: 30);
+  ///
+  /// The AI step alone is allowed [ApiClient.aiTimeout] (60s), and the
+  /// location lookup plus the weather/forecast/geocode calls that precede it
+  /// can add another 30s or so, so the chain gets a wider cap than any single
+  /// request. It still bounds the spinner: past this point the panel shows the
+  /// error state with a Retry button.
+  static const Duration defaultLoadTimeout = Duration(seconds: 90);
 
   final ApiClient _api;
 
@@ -178,14 +184,16 @@ class ActivitiesSuggestionsController extends ChangeNotifier {
         : null;
     final placeName = addressFromGeocode(results[2]);
 
-    // 4 — AI activity suggestions.
+    // 4 — AI activity suggestions. This is the slow step: the server allows
+    // OpenRouter up to 30s, so it gets the widened AI deadline rather than the
+    // client-wide default.
     final activitiesJson = await _api.post('ai/activities', <String, dynamic>{
       'currentConditions': weather,
       'hourlyForecast': ?hourly,
       'dailyForecast': ?daily,
       ...coordinates,
       'placeName': ?placeName,
-    });
+    }, timeout: ApiClient.aiTimeout);
 
     return _LoadResult(
       suggestions: _parseSuggestions(activitiesJson),
