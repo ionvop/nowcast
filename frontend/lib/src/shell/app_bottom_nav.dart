@@ -78,12 +78,15 @@ class AppBottomNav extends StatelessWidget {
   ///
   /// Returns [barHeight] plus the device's bottom gesture inset — deliberately
   /// *not* [totalHeight], so the [circleLift] strip the circle rises into is
-  /// left to the content. Reads [MediaQuery.viewPaddingOf] rather than
-  /// `padding` on purpose: hosts use `Scaffold.extendBody`, which already
-  /// inflates `padding.bottom` by the bar's height, so reading `padding` here
-  /// would double-count it.
+  /// left to the content. Reads the raw [View.viewPadding] rather than
+  /// `MediaQuery.padding` on purpose: hosts use `Scaffold.extendBody`, which
+  /// already inflates `padding.bottom` by the bar's height, so reading
+  /// `padding` here would double-count it. [View.viewPadding] is reported in
+  /// physical pixels, so it is divided by [View.devicePixelRatio] to convert
+  /// to logical pixels.
   static double contentInsetOf(BuildContext context) {
-    final bottomPadding = View.of(context).viewPadding.bottom / View.of(context).devicePixelRatio;
+    final view = View.of(context);
+    final bottomPadding = view.viewPadding.bottom / view.devicePixelRatio;
     return barHeight + bottomPadding;
   }
 
@@ -132,9 +135,7 @@ class AppBottomNav extends StatelessWidget {
                 border: Border(top: BorderSide(color: outlineColor)),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: isDark ? 0.40 : 0.06,
-                    ),
+                    color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, -2),
                   ),
