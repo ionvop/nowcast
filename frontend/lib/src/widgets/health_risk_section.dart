@@ -118,6 +118,9 @@ class _HealthRiskSectionState extends State<HealthRiskSection> {
           if (_assessment != null) 'previousAssessment': _assessment!.toJson(),
         },
         token: _auth.token,
+        // The server allows OpenRouter up to 30s, so this call needs more
+        // headroom than the client-wide default.
+        timeout: ApiClient.aiTimeout,
       );
       if (!mounted) return;
 
