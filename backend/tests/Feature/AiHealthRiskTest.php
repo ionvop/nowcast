@@ -93,6 +93,9 @@ test('ai health risk returns the assessment', function (): void {
             ],
             'hourlyForecast' => ['forecastHours' => []],
             'dailyForecast' => ['forecastDays' => []],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
+            'placeName' => 'Tagum',
         ])
         ->assertOk()
         ->assertJson([
@@ -116,6 +119,8 @@ test('ai health risk sends the stored profile and a strict schema', function ():
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertOk();
 
@@ -152,7 +157,46 @@ test('ai health risk sends the stored profile and a strict schema', function ():
             // The profile is read server-side, not taken from the request.
             && str_contains($body['messages'][1]['content'], '"age":68')
             && str_contains($body['messages'][1]['content'], 'cardiovascular')
-            && str_contains($body['messages'][1]['content'], 'currentConditions');
+            && str_contains($body['messages'][1]['content'], 'currentConditions')
+            // The location is forwarded as an authoritative context block.
+            && str_contains($body['messages'][1]['content'], '"location"')
+            && str_contains($body['messages'][1]['content'], '7.4478')
+            && str_contains($body['messages'][1]['content'], '125.8078');
+    });
+});
+
+test('ai health risk forwards the place name when supplied', function (): void {
+    fakeHealthRiskResponse(healthRiskContent());
+
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
+            'placeName' => 'Tagum',
+        ])
+        ->assertOk();
+
+    Http::assertSent(function ($request) {
+        $content = $request->data()['messages'][1]['content'];
+
+        return str_contains($content, '"placeName":"Tagum"');
+    });
+});
+
+test('ai health risk omits placeName when none is supplied', function (): void {
+    fakeHealthRiskResponse(healthRiskContent());
+
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
+        ])
+        ->assertOk();
+
+    Http::assertSent(function ($request) {
+        return ! str_contains($request->data()['messages'][1]['content'], 'placeName');
     });
 });
 
@@ -162,6 +206,8 @@ test('ai health risk forwards the previous assessment as context', function (): 
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
             'previousAssessment' => [
                 'riskScore' => 40,
                 'riskLevel' => 'high',
@@ -184,6 +230,8 @@ test('ai health risk omits previousAssessment when none is supplied', function (
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertOk();
 
@@ -195,6 +243,8 @@ test('ai health risk omits previousAssessment when none is supplied', function (
 test('ai health risk returns 401 when unauthenticated', function (): void {
     $this->postJson('/api/ai/health-risk', [
         'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(401);
 });
 
@@ -204,11 +254,44 @@ test('ai health risk returns 400 when the user has no profile', function (): voi
     $this->actingAs($user, 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(400)
         ->assertJson([
             'message' => 'A health profile is required before generating an assessment.',
         ]);
+});
+
+test('ai health risk requires latitude', function (): void {
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'longitude' => 125.8078,
+        ])
+        ->assertStatus(400)
+        ->assertJsonStructure(['message']);
+});
+
+test('ai health risk requires longitude', function (): void {
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+        ])
+        ->assertStatus(400)
+        ->assertJsonStructure(['message']);
+});
+
+test('ai health risk rejects an invalid latitude', function (): void {
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 'nope',
+            'longitude' => 125.8078,
+        ])
+        ->assertStatus(400)
+        ->assertJsonStructure(['message']);
 });
 
 test('ai health risk returns 400 when currentConditions is missing', function (): void {
@@ -226,6 +309,8 @@ test('ai health risk returns 502 when OpenRouter is unreachable', function (): v
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502)
         ->assertJson([
@@ -239,6 +324,8 @@ test('ai health risk returns 502 when the API key is missing', function (): void
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502)
         ->assertJson(['message' => 'AI API key is not configured.']);
@@ -254,6 +341,8 @@ test('ai health risk returns 502 when the model output is not JSON', function ()
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502)
         ->assertJson(['message' => 'AI service returned an invalid response.']);
@@ -267,6 +356,8 @@ test('ai health risk returns 502 when a required field is missing', function ():
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502)
         ->assertJson(['message' => 'AI service returned an invalid response.']);
@@ -278,6 +369,8 @@ test('ai health risk returns 502 when the risk level is not allowed', function (
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502);
 });
@@ -288,6 +381,8 @@ test('ai health risk returns 502 when the threshold is implausible', function ()
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502);
 });
@@ -298,6 +393,8 @@ test('ai health risk returns 502 when the hourly list is empty', function (): vo
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502);
 });
@@ -312,6 +409,8 @@ test('ai health risk returns 502 when an hourly point is missing a field', funct
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertStatus(502);
 });
@@ -343,6 +442,8 @@ test('ai health risk clamps out-of-range numbers and repairs the percentile orde
     $response = $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertOk();
 
@@ -389,6 +490,8 @@ test('ai health risk drops hourly points that cannot be plotted', function (): v
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertOk()
         ->assertJsonCount(1, 'hourly')
@@ -404,6 +507,8 @@ test('ai health risk drops empty strings from the findings and recommendations',
     $this->actingAs(userWithProfile(), 'sanctum')
         ->postJson('/api/ai/health-risk', [
             'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
         ])
         ->assertOk()
         ->assertJsonPath('keyFindings', ['Peak risk at 15:00.'])
