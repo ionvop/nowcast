@@ -7,6 +7,7 @@ import '../models/forecast_day.dart';
 import '../models/forecast_hour.dart';
 import '../services/settings_controller.dart';
 import '../utils/format.dart';
+import '../utils/geocode.dart';
 import '../utils/geolocation.dart';
 import '../widgets/app_card.dart';
 import '../widgets/error_view.dart';
@@ -48,6 +49,16 @@ class _HeatScreenState extends State<HeatScreen> {
   Map<String, dynamic>? _weatherJson;
   Map<String, dynamic>? _forecastJson;
   Map<String, dynamic>? _dailyJson;
+
+  /// The coordinates the payloads were fetched for, forwarded to the
+  /// health-risk section so the model describes the user's actual place
+  /// instead of inferring a city from the payload's timezone.
+  double? _latitude;
+  double? _longitude;
+
+  /// The reverse-geocoded place name, forwarded as `placeName`. Null when the
+  /// geocode request failed; the assessment still works without it.
+  String? _city;
 
   @override
   void initState() {
@@ -97,12 +108,20 @@ class _HeatScreenState extends State<HeatScreen> {
       final weatherJson = await _loadWeather(position);
       if (!mounted) return;
 
+      // The place name is optional: a failure only drops the name from the
+      // health-risk prompt, never the assessment itself.
+      final city = await _loadCity(position);
+      if (!mounted) return;
+
       setState(() {
         _forecast = forecast;
         _dailyForecast = dailyForecast;
         _forecastJson = forecastMap;
         _dailyJson = dailyMap;
         _weatherJson = weatherJson;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _city = city;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -125,6 +144,22 @@ class _HeatScreenState extends State<HeatScreen> {
         'longitude': position.longitude,
       });
       return json is Map<String, dynamic> ? json : null;
+    } on Exception {
+      return null;
+    }
+  }
+
+  /// Reverse-geocodes the position, returning null when the request fails.
+  ///
+  /// This is deliberately non-fatal: the place name only improves the
+  /// health-risk prompt, so a failure must not block the page.
+  Future<String?> _loadCity(Position position) async {
+    try {
+      final json = await _api.post('geocode', {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      });
+      return addressFromGeocode(json);
     } on Exception {
       return null;
     }
@@ -188,6 +223,9 @@ class _HeatScreenState extends State<HeatScreen> {
       weatherJson: _weatherJson,
       forecastJson: _forecastJson,
       dailyJson: _dailyJson,
+      latitude: _latitude,
+      longitude: _longitude,
+      placeName: _city,
     );
   }
 }
@@ -202,6 +240,9 @@ class _HeatChart extends StatefulWidget {
     this.weatherJson,
     this.forecastJson,
     this.dailyJson,
+    this.latitude,
+    this.longitude,
+    this.placeName,
   });
 
   final List<ForecastHour> hours;
@@ -212,6 +253,11 @@ class _HeatChart extends StatefulWidget {
   final Map<String, dynamic>? weatherJson;
   final Map<String, dynamic>? forecastJson;
   final Map<String, dynamic>? dailyJson;
+
+  /// The coordinates and place name forwarded to the health-risk section.
+  final double? latitude;
+  final double? longitude;
+  final String? placeName;
 
   @override
   State<_HeatChart> createState() => _HeatChartState();
@@ -344,11 +390,16 @@ class _HeatChartState extends State<_HeatChart> {
             _Legend(series: <Object>[_uvSeries]),
             // The health-risk section is independent of the hourly/daily
             // toggle above: it always shows the same assessment.
-            if (widget.weatherJson != null) ...<Widget>[
+            if (widget.weatherJson != null &&
+                widget.latitude != null &&
+                widget.longitude != null) ...<Widget>[
               const SizedBox(height: 24),
               FadeSlideIn(
                 child: HealthRiskSection(
                   currentConditions: widget.weatherJson!,
+                  latitude: widget.latitude!,
+                  longitude: widget.longitude!,
+                  placeName: widget.placeName,
                   hourlyForecast: widget.forecastJson,
                   dailyForecast: widget.dailyJson,
                 ),
