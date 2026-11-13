@@ -68,10 +68,13 @@ ApiClient _buildApi(Map<String, dynamic> summaryJson) {
   final mock = MockClient((http.Request request) async {
     if (request.url.path.endsWith('/ai/summary')) {
       final body = jsonDecode(request.body) as Map<String, dynamic>;
-      // Verify the section forwards the raw payloads.
+      // Verify the section forwards the raw payloads and the location.
       expect(body['currentConditions'], _conditionsJson());
       expect(body['hourlyForecast'], _hourlyJson());
       expect(body['dailyForecast'], _dailyJson());
+      expect(body['latitude'], 7.4478);
+      expect(body['longitude'], 125.8078);
+      expect(body['placeName'], 'Tagum');
       return http.Response(
         jsonEncode(summaryJson),
         200,
@@ -99,6 +102,9 @@ Widget _wrap({required ApiClient api}) {
     home: Scaffold(
       body: AiSummarySection(
         currentConditions: _conditionsJson(),
+        latitude: 7.4478,
+        longitude: 125.8078,
+        placeName: 'Tagum',
         hourlyForecast: _hourlyJson(),
         dailyForecast: _dailyJson(),
         api: api,
