@@ -18,6 +18,9 @@ class AiFeaturesSection extends StatelessWidget {
   const AiFeaturesSection({
     super.key,
     required this.currentConditions,
+    required this.latitude,
+    required this.longitude,
+    this.placeName,
     this.hourlyForecast,
     this.dailyForecast,
     this.api,
@@ -27,6 +30,15 @@ class AiFeaturesSection extends StatelessWidget {
 
   /// The raw Google current-conditions payload (see API §5.1).
   final Map<String, dynamic> currentConditions;
+
+  /// The device latitude the weather payloads were fetched for.
+  final double latitude;
+
+  /// The device longitude the weather payloads were fetched for.
+  final double longitude;
+
+  /// A human-readable place name (e.g. the reverse-geocoded city). Optional.
+  final String? placeName;
 
   /// The raw Google hourly forecast payload (see API §5.2). Optional.
   final Map<String, dynamic>? hourlyForecast;
@@ -58,6 +70,9 @@ class AiFeaturesSection extends StatelessWidget {
           children: <Widget>[
             AiSummarySection(
               currentConditions: currentConditions,
+              latitude: latitude,
+              longitude: longitude,
+              placeName: placeName,
               hourlyForecast: hourlyForecast,
               dailyForecast: dailyForecast,
               api: api,
