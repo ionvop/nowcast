@@ -45,6 +45,8 @@ test('ai calls are attempted only once so they finish inside the client budget',
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502);
 
     Http::assertSentCount(1);
