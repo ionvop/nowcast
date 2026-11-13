@@ -11,11 +11,16 @@ import 'app_card.dart';
 /// "Generate summary" button and does not contact the backend until that
 /// button is pressed. When pressed, it sends the current-conditions,
 /// hourly-forecast, and (optionally) daily forecast payloads that the Home
-/// page already fetched to the `POST /api/ai/summary` endpoint, then renders:
+/// page already fetched, plus the user's location, to the
+/// `POST /api/ai/summary` endpoint, then renders:
 ///
 /// 1. A short paragraph summarizing the analysis.
 /// 2. A short paragraph of health advice based on the conditions.
 /// 3. A single link to an article recommended by the AI.
+///
+/// The location is sent because the weather payloads only carry a timezone
+/// (e.g. `Asia/Manila`), which spans many cities; without it the model names
+/// the wrong place.
 ///
 /// The section manages its own load state so a slow or failing LLM call never
 /// blocks the rest of the Home page: while loading it shows a compact
@@ -24,6 +29,9 @@ class AiSummarySection extends StatefulWidget {
   const AiSummarySection({
     super.key,
     required this.currentConditions,
+    required this.latitude,
+    required this.longitude,
+    this.placeName,
     this.hourlyForecast,
     this.dailyForecast,
     this.api,
@@ -31,6 +39,15 @@ class AiSummarySection extends StatefulWidget {
 
   /// The raw Google current-conditions payload (see API §5.1).
   final Map<String, dynamic> currentConditions;
+
+  /// The device latitude the weather payloads were fetched for.
+  final double latitude;
+
+  /// The device longitude the weather payloads were fetched for.
+  final double longitude;
+
+  /// A human-readable place name (e.g. the reverse-geocoded city). Optional.
+  final String? placeName;
 
   /// The raw Google hourly forecast payload (see API §5.2). Optional.
   final Map<String, dynamic>? hourlyForecast;
@@ -72,6 +89,9 @@ class _AiSummarySectionState extends State<AiSummarySection> {
           if (widget.hourlyForecast != null)
             'hourlyForecast': widget.hourlyForecast,
           if (widget.dailyForecast != null) 'dailyForecast': widget.dailyForecast,
+          'latitude': widget.latitude,
+          'longitude': widget.longitude,
+          'placeName': ?widget.placeName,
         },
         // The server allows OpenRouter up to 30s, so this call needs more
         // headroom than the client-wide default.
