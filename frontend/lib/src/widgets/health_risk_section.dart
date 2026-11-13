@@ -31,6 +31,9 @@ class HealthRiskSection extends StatefulWidget {
   const HealthRiskSection({
     super.key,
     required this.currentConditions,
+    required this.latitude,
+    required this.longitude,
+    this.placeName,
     this.hourlyForecast,
     this.dailyForecast,
     this.api,
@@ -41,6 +44,15 @@ class HealthRiskSection extends StatefulWidget {
 
   /// The raw Google current-conditions payload (see API §5.1).
   final Map<String, dynamic> currentConditions;
+
+  /// The device latitude the weather payloads were fetched for.
+  final double latitude;
+
+  /// The device longitude the weather payloads were fetched for.
+  final double longitude;
+
+  /// A human-readable place name (e.g. the reverse-geocoded city). Optional.
+  final String? placeName;
 
   /// The raw Google hourly forecast payload (see API §5.2). Optional.
   final Map<String, dynamic>? hourlyForecast;
@@ -113,6 +125,12 @@ class _HealthRiskSectionState extends State<HealthRiskSection> {
           if (widget.hourlyForecast != null)
             'hourlyForecast': widget.hourlyForecast,
           if (widget.dailyForecast != null) 'dailyForecast': widget.dailyForecast,
+          // The location is sent because the weather payloads only carry a
+          // timezone (e.g. `Asia/Manila`), which spans many cities; without it
+          // the model names the wrong place.
+          'latitude': widget.latitude,
+          'longitude': widget.longitude,
+          'placeName': ?widget.placeName,
           // Send the previous result so the model can stay consistent with
           // what the user already saw.
           if (_assessment != null) 'previousAssessment': _assessment!.toJson(),
