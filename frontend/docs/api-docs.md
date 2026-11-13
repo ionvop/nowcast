@@ -1013,6 +1013,11 @@ The client supplies the weather payloads it already fetched (via §5.1, §5.2,
 are sent to an LLM hosted on OpenRouter (model `deepseek/deepseek-v4-flash-0731:online`
 by default, overridable with `OPENROUTER_MODEL`) which returns structured JSON.
 
+The client also supplies the location the payloads were fetched for. The weather
+payloads only carry a timezone (e.g. `Asia/Manila`), which spans many cities, so
+the location is what the model uses to name the user's place. The prompt tells
+the model never to infer a city from `timeZone.id`.
+
 ```
 POST /api/ai/summary
 ```
@@ -1035,7 +1040,10 @@ POST /api/ai/summary
   },
   "dailyForecast": {
     "forecastDays": [ /* ... */ ]
-  }
+  },
+  "latitude": 7.4478,
+  "longitude": 125.8078,
+  "placeName": "Tagum"
 }
 ```
 
@@ -1044,19 +1052,22 @@ POST /api/ai/summary
 | `currentConditions` | object | required — the raw Google current-conditions payload |
 | `hourlyForecast` | object | optional — the raw Google hourly forecast payload |
 | `dailyForecast` | object | optional — the raw Google daily forecast payload |
+| `latitude` | number | required — between -90 and 90 |
+| `longitude` | number | required — between -180 and 180 |
+| `placeName` | string | optional — a human-readable place name (e.g. from §5.4 geocoding) that the model names in the summary |
 
 **Success — `200`:**
 
 ```json
 {
-  "summary": "Hot and humid with a heat index of 41°C; sunshine continues into the afternoon before showers arrive tonight.",
+  "summary": "Hot and humid in Tagum with a heat index of 41°C; sunshine continues into the afternoon before showers arrive tonight.",
   "healthAdvice": "Heat is the main risk. Limit strenuous outdoor activity, drink water, and take breaks in the shade or air conditioning during peak hours.",
   "articleUrl": "https://www.cdc.gov/heat-health/about/index.html"
 }
 ```
 
 **Errors:**
-- `400` — validation error (`currentConditions` required)
+- `400` — validation error (`currentConditions`, `latitude`, and `longitude` required)
 - `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
 
 **Timing:** the server makes a single OpenRouter attempt bounded by
@@ -1267,6 +1278,12 @@ request body, so the client cannot spoof or omit health details. The client
 supplies the weather payloads it already fetched (via §5.1, §5.2, §5.3); the
 server does **not** call Google again.
 
+The client also supplies the location the payloads were fetched for, exactly as
+§5.20 and §5.21 do. The weather payloads only carry a timezone (e.g.
+`Asia/Manila`), which spans many cities, so the location is what the model uses
+to name the user's place. The prompt tells the model never to infer a city from
+`timeZone.id`.
+
 ```
 POST /api/ai/health-risk
 ```
@@ -1287,6 +1304,9 @@ POST /api/ai/health-risk
   "dailyForecast": {
     "forecastDays": [ /* ... */ ]
   },
+  "latitude": 7.4478,
+  "longitude": 125.8078,
+  "placeName": "Tagum",
   "previousAssessment": {
     "riskScore": 40,
     "riskLevel": "high",
@@ -1300,6 +1320,9 @@ POST /api/ai/health-risk
 | `currentConditions` | object | required — the raw Google current-conditions payload |
 | `hourlyForecast` | object | optional — the raw Google hourly forecast payload |
 | `dailyForecast` | object | optional — the raw Google daily forecast payload |
+| `latitude` | number | required — between -90 and 90 |
+| `longitude` | number | required — between -180 and 180 |
+| `placeName` | string | optional — a human-readable place name (e.g. from §5.4 geocoding) that the model names in the summary |
 | `previousAssessment` | object \| null | optional — the last assessment the user saw; sent when regenerating so the new answer stays consistent with it |
 
 **Success — `200`:**
@@ -1351,7 +1374,7 @@ POST /api/ai/health-risk
 > `hour` or `hourIndex` are dropped rather than failing the request.
 
 **Errors:**
-- `400` — validation error (`currentConditions` required), or the user has no saved profile (`{"message": "A health profile is required before generating an assessment."}`)
+- `400` — validation error (`currentConditions`, `latitude`, and `longitude` required), or the user has no saved profile (`{"message": "A health profile is required before generating an assessment."}`)
 - `401` — `{"message": "Unauthorized."}`
 - `502` — OpenRouter unreachable, errored, unconfigured API key, or returned a malformed/empty response
 
@@ -1455,12 +1478,12 @@ The client should:
 | GET | `/api/posts/{id}` | No | — | `200` post + user |
 | GET | `/api/posts/{id}/comments` | No | — | `200` array of comments + user / `404` |
 | GET | `/api/users/{id}/posts` | No | — | `200` array of a user's posts + user / `404` |
-| POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?}` | `200` `{summary, healthAdvice, articleUrl}` |
+| POST | `/api/ai/summary` | No | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?}` | `200` `{summary, healthAdvice, articleUrl}` |
 | POST | `/api/ai/activities` | No | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?}` | `200` `{suggestions: [...]}` |
 | GET | `/api/profile/health` | Yes | — | `200` `{profile: {...}\|null}` |
 | PUT | `/api/profile/health` | Yes | `{age, biologicalSex, heightCm?, weightKg?, activityLevel?, conditions?, medications?, lifestyle?}` | `200` `{profile: {...}}` |
 | DELETE | `/api/profile/health` | Yes | — | `200` `{message}` |
-| POST | `/api/ai/health-risk` | Yes | `{currentConditions, hourlyForecast?, dailyForecast?, previousAssessment?}` | `200` `{riskScore, riskLevel, thresholdC, thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly}` |
+| POST | `/api/ai/health-risk` | Yes | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?, previousAssessment?}` | `200` `{riskScore, riskLevel, thresholdC, thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | POST | `/api/posts/{id}/comments` | Yes | `{content}` | `201` comment + user / `401` / `404` |
