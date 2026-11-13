@@ -69,6 +69,9 @@ Widget _wrap({
       body: SingleChildScrollView(
         child: AiFeaturesSection(
           currentConditions: _conditionsJson(),
+          latitude: 7.4478,
+          longitude: 125.8078,
+          placeName: 'Tagum',
           auth: auth,
           bubbleController: bubbleController,
         ),
