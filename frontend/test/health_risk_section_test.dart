@@ -106,12 +106,18 @@ Widget wrap({
   required HealthProfileController profiles,
   required HealthRiskCache cache,
   ApiClient? api,
+  double latitude = 7.4478,
+  double longitude = 125.8078,
+  String? placeName,
 }) {
   return MaterialApp(
     home: Scaffold(
       body: SingleChildScrollView(
         child: HealthRiskSection(
           currentConditions: conditionsJson(),
+          latitude: latitude,
+          longitude: longitude,
+          placeName: placeName,
           api: api,
           auth: auth,
           profileController: profiles,
@@ -246,8 +252,35 @@ void main() {
 
     expect(api.bodies, hasLength(1));
     expect(api.bodies.single['currentConditions'], isNotNull);
+    // The location is forwarded so the model names the user's actual place.
+    expect(api.bodies.single['latitude'], 7.4478);
+    expect(api.bodies.single['longitude'], 125.8078);
     // No previous assessment on the first run.
     expect(api.bodies.single.containsKey('previousAssessment'), isFalse);
+  });
+
+  testWidgets('generating forwards the place name when supplied', (
+    tester,
+  ) async {
+    final api = RecordingApi();
+
+    await tester.pumpWidget(
+      wrap(
+        auth: signedInAuth(),
+        profiles: profileControllerWith(
+          const HealthProfile(age: 68, biologicalSex: 'female'),
+        ),
+        cache: HealthRiskCache(),
+        api: api.build(),
+        placeName: 'Tagum',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Generate assessment'));
+    await tester.pumpAndSettle();
+
+    expect(api.bodies.single['placeName'], 'Tagum');
   });
 
   testWidgets('regenerating sends the previous assessment as context', (
