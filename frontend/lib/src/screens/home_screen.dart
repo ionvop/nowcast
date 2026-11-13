@@ -42,6 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _city;
   Forecast? _forecast;
 
+  /// The coordinates the weather payloads were fetched for, forwarded to the
+  /// AI summary so the model describes the user's actual place instead of
+  /// inferring a city from the payload's timezone.
+  double? _latitude;
+  double? _longitude;
+
   /// The raw current-conditions and forecast payloads, kept alongside the
   /// typed models so the AI summary can forward the full JSON to the backend
   /// without dropping fields the typed models do not parse.
@@ -124,6 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _dailyJson = dailyMap;
         _city = city;
         _forecast = forecast;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -185,6 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
       weatherJson: _weatherJson,
       forecastJson: _forecastJson,
       dailyJson: _dailyJson,
+      latitude: _latitude,
+      longitude: _longitude,
       retryToken: _refreshCount,
     );
   }
@@ -198,6 +208,8 @@ class _HomeContent extends StatelessWidget {
     required this.weatherJson,
     required this.forecastJson,
     required this.dailyJson,
+    required this.latitude,
+    required this.longitude,
     required this.retryToken,
   });
 
@@ -209,6 +221,11 @@ class _HomeContent extends StatelessWidget {
   final Map<String, dynamic>? weatherJson;
   final Map<String, dynamic>? forecastJson;
   final Map<String, dynamic>? dailyJson;
+
+  /// The coordinates the payloads were fetched for, forwarded to the AI
+  /// summary section.
+  final double? latitude;
+  final double? longitude;
 
   final int retryToken;
 
@@ -238,16 +255,20 @@ class _HomeContent extends StatelessWidget {
               retryToken: retryToken,
             ),
           ),
-          if (weatherJson != null) ...<Widget>[
-            const SizedBox(height: 16),
-            FadeSlideIn(
-              child: AiFeaturesSection(
-                currentConditions: weatherJson!,
-                hourlyForecast: forecastJson,
-                dailyForecast: dailyJson,
+          if (weatherJson != null && latitude != null && longitude != null)
+            ...<Widget>[
+              const SizedBox(height: 16),
+              FadeSlideIn(
+                child: AiFeaturesSection(
+                  currentConditions: weatherJson!,
+                  latitude: latitude!,
+                  longitude: longitude!,
+                  placeName: city,
+                  hourlyForecast: forecastJson,
+                  dailyForecast: dailyJson,
+                ),
               ),
-            ),
-          ],
+            ],
           const SizedBox(height: 16),
           FadeSlideIn(child: HealthReminderSection(weather: weather)),
           const SizedBox(height: 16),
