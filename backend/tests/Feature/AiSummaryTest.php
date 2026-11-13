@@ -34,6 +34,9 @@ test('ai summary returns the model analysis', function (): void {
         ],
         'hourlyForecast' => ['forecastHours' => []],
         'dailyForecast' => ['forecastDays' => []],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
+        'placeName' => 'Tagum',
     ])->assertOk()->assertJson([
         'summary' => 'Hot and humid with a heat index of 41°C.',
         'healthAdvice' => 'Limit strenuous outdoor activity and stay hydrated.',
@@ -51,14 +54,42 @@ test('ai summary returns the model analysis', function (): void {
             && $body['response_format']['json_schema']['schema']['required'] === ['summary', 'healthAdvice', 'articleUrl']
             && $body['messages'][0]['role'] === 'system'
             && $body['messages'][1]['role'] === 'user'
-            && str_contains($body['messages'][1]['content'], 'currentConditions');
+            && str_contains($body['messages'][1]['content'], 'currentConditions')
+            && str_contains($body['messages'][1]['content'], 'Tagum')
+            && str_contains($body['messages'][1]['content'], '7.4478')
+            && str_contains($body['messages'][1]['content'], '125.8078');
     });
 });
 
 test('ai summary requires currentConditions', function (): void {
-    $this->postJson('/api/ai/summary', [])
+    $this->postJson('/api/ai/summary', [
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
+    ])
         ->assertStatus(400)
         ->assertJsonStructure(['message']);
+});
+
+test('ai summary requires latitude', function (): void {
+    $this->postJson('/api/ai/summary', [
+        'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'longitude' => 125.8078,
+    ])->assertStatus(400)->assertJsonStructure(['message']);
+});
+
+test('ai summary requires longitude', function (): void {
+    $this->postJson('/api/ai/summary', [
+        'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+    ])->assertStatus(400)->assertJsonStructure(['message']);
+});
+
+test('ai summary rejects an invalid latitude', function (): void {
+    $this->postJson('/api/ai/summary', [
+        'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 'nope',
+        'longitude' => 125.8078,
+    ])->assertStatus(400)->assertJsonStructure(['message']);
 });
 
 test('ai summary returns 502 when OpenRouter is unreachable', function (): void {
@@ -68,6 +99,8 @@ test('ai summary returns 502 when OpenRouter is unreachable', function (): void 
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502)->assertJson([
         'message' => 'AI service is currently unreachable. Please try again later.',
     ]);
@@ -78,6 +111,8 @@ test('ai summary returns 502 when the API key is missing', function (): void {
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502)->assertJson([
         'message' => 'AI API key is not configured.',
     ]);
@@ -92,6 +127,8 @@ test('ai summary returns 502 when the model output is not JSON', function (): vo
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502)->assertJson([
         'message' => 'AI service returned an invalid response.',
     ]);
@@ -109,6 +146,8 @@ test('ai summary returns 502 when a required field is missing', function (): voi
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502)->assertJson([
         'message' => 'AI service returned an invalid response.',
     ]);
@@ -127,6 +166,8 @@ test('ai summary returns 502 when the article URL is invalid', function (): void
 
     $this->postJson('/api/ai/summary', [
         'currentConditions' => ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
+        'latitude' => 7.4478,
+        'longitude' => 125.8078,
     ])->assertStatus(502)->assertJson([
         'message' => 'AI service returned an invalid response.',
     ]);
@@ -141,5 +182,8 @@ test('service throws OpenRouterApiException on upstream error status', function 
         ['temperature' => ['degrees' => 33.0, 'unit' => 'CELSIUS']],
         [],
         [],
+        7.4478,
+        125.8078,
+        'Tagum',
     ))->toThrow(OpenRouterApiException::class);
 });
