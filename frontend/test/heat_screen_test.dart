@@ -131,9 +131,19 @@ Map<String, dynamic> weatherJson() {
   };
 }
 
+/// Builds a raw reverse-geocode response (see API §5.4).
+Map<String, dynamic> geocodeJson() {
+  return <String, dynamic>{
+    'results': <Map<String, dynamic>>[
+      <String, dynamic>{'formattedAddress': 'Tagum, Davao del Norte'},
+    ],
+  };
+}
+
 /// Returns an [ApiClient] whose `post` returns the hourly response for the
-/// `forecast` path, the daily response for the `forecast/daily` path, and the
-/// current conditions for the `weather` path.
+/// `forecast` path, the daily response for the `forecast/daily` path, the
+/// current conditions for the `weather` path, and a geocode result for the
+/// `geocode` path.
 ApiClient buildApi({int hours = 6, int days = 7}) {
   final mock = MockClient((http.Request request) async {
     final path = request.url.path;
@@ -147,6 +157,13 @@ ApiClient buildApi({int hours = 6, int days = 7}) {
     if (path.endsWith('/weather')) {
       return http.Response(
         jsonEncode(weatherJson()),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    }
+    if (path.endsWith('/geocode')) {
+      return http.Response(
+        jsonEncode(geocodeJson()),
         200,
         headers: <String, String>{'content-type': 'application/json'},
       );
@@ -249,6 +266,47 @@ void main() {
       find.text('No forecast data is available for your location right now.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('reverse-geocodes the position for the health-risk section', (
+    tester,
+  ) async {
+    final paths = <String>[];
+    final mock = MockClient((http.Request request) async {
+      final path = request.url.path;
+      paths.add(path);
+      if (path.endsWith('/forecast/daily')) {
+        return http.Response(
+          jsonEncode(dailyJson(7)),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (path.endsWith('/weather')) {
+        return http.Response(
+          jsonEncode(weatherJson()),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (path.endsWith('/geocode')) {
+        return http.Response(
+          jsonEncode(geocodeJson()),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(hourlyJson(6)),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+    final api = ApiClient(client: mock, baseUrl: 'http://example.com/api');
+
+    await pumpHeatScreen(tester, api: api);
+
+    expect(paths.any((p) => p.endsWith('/geocode')), isTrue);
   });
 
   testWidgets('tapping a spot pins the tooltip until tapping elsewhere', (
