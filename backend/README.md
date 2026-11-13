@@ -107,7 +107,7 @@ Copy `.env.example` to `.env` and fill in the Google credentials:
 | GET | `/api/profile/health` | Yes | Current user's health profile (or `null`) |
 | PUT | `/api/profile/health` | Yes | Create or replace the health profile |
 | DELETE | `/api/profile/health` | Yes | Delete the health profile |
-| POST | `/api/ai/health-risk` | Yes | Personalized heat-risk assessment from the saved profile + weather |
+| POST | `/api/ai/health-risk` | Yes | Personalized heat-risk assessment from the saved profile + weather + location |
 | POST | `/api/logout` | Yes | Revoke the current token |
 | GET | `/api/auth/google/redirect` | No | Redirect to the Google consent screen |
 | GET | `/api/auth/google/callback` | No | OAuth callback (issues a Sanctum token) |
