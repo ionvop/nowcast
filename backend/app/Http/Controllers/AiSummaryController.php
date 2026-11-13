@@ -16,6 +16,9 @@ class AiSummaryController extends Controller
     /**
      * Generate a short AI summary, health advice, and a recommended article
      * from the current-conditions and forecast payloads supplied by the client.
+     *
+     * The location is forwarded so the model describes the user's actual
+     * place instead of inferring a city from the payload's timezone.
      */
     public function summary(AiSummaryRequest $request): JsonResponse
     {
@@ -24,6 +27,9 @@ class AiSummaryController extends Controller
                 $request->currentConditions,
                 $request->hourlyForecast ?? [],
                 $request->dailyForecast ?? [],
+                (float) $request->latitude,
+                (float) $request->longitude,
+                $request->placeName ?? null,
             );
         } catch (OpenRouterApiException $e) {
             return response()->json(
