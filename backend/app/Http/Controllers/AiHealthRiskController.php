@@ -41,6 +41,9 @@ class AiHealthRiskController extends Controller
                 $request->currentConditions,
                 $request->hourlyForecast ?? [],
                 $request->dailyForecast ?? [],
+                (float) $request->latitude,
+                (float) $request->longitude,
+                $request->placeName ?? null,
                 $request->previousAssessment,
             );
         } catch (OpenRouterApiException $e) {
