@@ -98,9 +98,16 @@ class OpenRouterService
     /**
      * Ask the model to summarize the weather payloads and return structured advice.
      *
+     * The location is supplied explicitly because the weather payloads only
+     * carry a timezone (e.g. `Asia/Manila`), which spans many cities and would
+     * otherwise lead the model to name the wrong one.
+     *
      * @param  array<string, mixed>  $currentConditions  The raw Google current-conditions payload.
      * @param  array<string, mixed>  $hourlyForecast  The raw Google hourly forecast payload.
      * @param  array<string, mixed>  $dailyForecast  The raw Google daily forecast payload.
+     * @param  float  $latitude  The location latitude.
+     * @param  float  $longitude  The location longitude.
+     * @param  ?string  $placeName  An optional human-readable place name (e.g. from geocoding).
      * @return array{summary: string, healthAdvice: string, articleUrl: string}
      *
      * @throws OpenRouterApiException When OpenRouter is unreachable, returns an
@@ -110,8 +117,18 @@ class OpenRouterService
         array $currentConditions,
         array $hourlyForecast,
         array $dailyForecast,
+        float $latitude,
+        float $longitude,
+        ?string $placeName,
     ): array {
-        $payload = $this->completionsRequestBody($currentConditions, $hourlyForecast, $dailyForecast);
+        $payload = $this->completionsRequestBody(
+            $currentConditions,
+            $hourlyForecast,
+            $dailyForecast,
+            $latitude,
+            $longitude,
+            $placeName,
+        );
 
         return $this->normalize($this->completions($payload));
     }
@@ -161,10 +178,17 @@ class OpenRouterService
      * supplied it is included in the prompt as a reference point so a
      * regeneration stays consistent with what the user already saw.
      *
+     * The location is supplied explicitly because the weather payloads only
+     * carry a timezone (e.g. `Asia/Manila`), which spans many cities and would
+     * otherwise lead the model to name the wrong one.
+     *
      * @param  array<string, mixed>  $profile  The user's health profile.
      * @param  array<string, mixed>  $currentConditions  The raw Google current-conditions payload.
      * @param  array<string, mixed>  $hourlyForecast  The raw Google hourly forecast payload.
      * @param  array<string, mixed>  $dailyForecast  The raw Google daily forecast payload.
+     * @param  float  $latitude  The location latitude.
+     * @param  float  $longitude  The location longitude.
+     * @param  ?string  $placeName  An optional human-readable place name (e.g. from geocoding).
      * @param  array<string, mixed>|null  $previousAssessment  The last assessment shown to the user, if any.
      * @return array<string, mixed>
      *
@@ -176,6 +200,9 @@ class OpenRouterService
         array $currentConditions,
         array $hourlyForecast,
         array $dailyForecast,
+        float $latitude,
+        float $longitude,
+        ?string $placeName,
         ?array $previousAssessment = null,
     ): array {
         $payload = $this->healthRiskRequestBody(
@@ -183,6 +210,9 @@ class OpenRouterService
             $currentConditions,
             $hourlyForecast,
             $dailyForecast,
+            $latitude,
+            $longitude,
+            $placeName,
             $previousAssessment,
         );
 
@@ -252,18 +282,24 @@ class OpenRouterService
     }
 
     /**
-     * Build the chat-completions request body with the weather context and a
-     * strict JSON output contract.
+     * Build the chat-completions request body with the weather context, the
+     * user's location, and a strict JSON output contract.
      *
      * @param  array<string, mixed>  $currentConditions
      * @param  array<string, mixed>  $hourlyForecast
      * @param  array<string, mixed>  $dailyForecast
+     * @param  float  $latitude
+     * @param  float  $longitude
+     * @param  ?string  $placeName
      * @return array<string, mixed>
      */
     protected function completionsRequestBody(
         array $currentConditions,
         array $hourlyForecast,
         array $dailyForecast,
+        float $latitude,
+        float $longitude,
+        ?string $placeName,
     ): array {
         $system = [
             'role' => 'system',
@@ -278,6 +314,13 @@ current-conditions and forecast payloads and produce:
   CDC, WHO, NOAA, a national weather service) that the user can read to learn more
   about the dominant weather risk.
 
+The user message includes a "location" object with the user's latitude, longitude,
+and (when available) placeName. That location is authoritative: when you refer to
+where the user is, use it. When placeName is present, name that place in the
+summary. Never infer or guess the user's city from the weather payload's
+timeZone.id — a timezone such as "Asia/Manila" covers many cities and is not the
+user's location.
+
 Return strictly valid JSON with exactly these three keys: summary, healthAdvice,
 articleUrl. Do not wrap the JSON in markdown or add commentary outside the JSON.
 PROMPT,
@@ -289,9 +332,21 @@ PROMPT,
             'dailyForecast' => $dailyForecast,
         ], fn ($value) => $value !== []);
 
+        $location = [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
+
+        if (is_string($placeName) && $placeName !== '') {
+            $location['placeName'] = $placeName;
+        }
+
         $user = [
             'role' => 'user',
-            'content' => 'Here is the weather data to analyze: '.json_encode($userActual),
+            'content' => 'Here is the weather data and location to analyze: '.json_encode([
+                'location' => $location,
+                'weather' => $userActual,
+            ]),
         ];
 
         return [
@@ -567,6 +622,9 @@ PROMPT,
      * @param  array<string, mixed>  $currentConditions
      * @param  array<string, mixed>  $hourlyForecast
      * @param  array<string, mixed>  $dailyForecast
+     * @param  float  $latitude
+     * @param  float  $longitude
+     * @param  ?string  $placeName
      * @param  array<string, mixed>|null  $previousAssessment
      * @return array<string, mixed>
      */
@@ -575,6 +633,9 @@ PROMPT,
         array $currentConditions,
         array $hourlyForecast,
         array $dailyForecast,
+        float $latitude,
+        float $longitude,
+        ?string $placeName,
         ?array $previousAssessment,
     ): array {
         $system = [
@@ -620,6 +681,13 @@ Rules:
   consistent with it unless the weather or the profile has changed materially, and say
   what changed when your numbers move.
 
+The user message includes a "location" object with the user's latitude, longitude,
+and (when available) placeName. That location is authoritative: when you refer to
+where the user is, use it. When placeName is present, name that place in the
+summary. Never infer or guess the user's city from the weather payload's
+timeZone.id — a timezone such as "Asia/Manila" covers many cities and is not the
+user's location.
+
 Return strictly valid JSON with exactly these keys: riskScore, riskLevel, thresholdC,
 thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly. Do not wrap
 the JSON in markdown or add commentary outside the JSON.
@@ -632,7 +700,17 @@ PROMPT,
             'dailyForecast' => $dailyForecast,
         ], fn ($value) => $value !== []);
 
+        $location = [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ];
+
+        if (is_string($placeName) && $placeName !== '') {
+            $location['placeName'] = $placeName;
+        }
+
         $context = [
+            'location' => $location,
             'profile' => $profile,
             'weather' => $weather,
         ];
@@ -643,7 +721,7 @@ PROMPT,
 
         $user = [
             'role' => 'user',
-            'content' => 'Here is the health profile and weather data to assess: '.json_encode($context),
+            'content' => 'Here is the location, health profile, and weather data to assess: '.json_encode($context),
         ];
 
         return [
