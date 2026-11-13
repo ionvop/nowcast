@@ -15,6 +15,9 @@ use Illuminate\Foundation\Http\FormRequest;
  * @property array<string, mixed>|null $hourlyForecast
  * @property array<string, mixed>|null $dailyForecast
  * @property array<string, mixed>|null $previousAssessment
+ * @property float $latitude
+ * @property float $longitude
+ * @property ?string $placeName
  */
 class AiHealthRiskRequest extends FormRequest
 {
@@ -33,6 +36,9 @@ class AiHealthRiskRequest extends FormRequest
             'hourlyForecast' => ['sometimes', 'array'],
             'dailyForecast' => ['sometimes', 'array'],
             'previousAssessment' => ['sometimes', 'nullable', 'array'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'placeName' => ['sometimes', 'string'],
         ];
     }
 }
