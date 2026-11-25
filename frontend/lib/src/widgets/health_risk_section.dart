@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
@@ -186,6 +187,17 @@ class _HealthRiskSectionState extends State<HealthRiskSection> {
     });
   }
 
+  Future<void> _openSource(String url) async {
+    if (!url.startsWith('http')) return;
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the source.')),
+      );
+    }
+  }
+
   Future<void> _openDetails() async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
@@ -285,6 +297,7 @@ class _HealthRiskSectionState extends State<HealthRiskSection> {
         use24Hour: settingsController.is24Hour,
         onRegenerate: _generate,
         onClear: _clear,
+        onOpenSource: _openSource,
       );
     }
 
@@ -430,12 +443,14 @@ class _RiskContent extends StatelessWidget {
     required this.use24Hour,
     required this.onRegenerate,
     required this.onClear,
+    required this.onOpenSource,
   });
 
   final HealthRiskAssessment assessment;
   final bool use24Hour;
   final VoidCallback onRegenerate;
   final VoidCallback onClear;
+  final ValueChanged<String> onOpenSource;
 
   @override
   Widget build(BuildContext context) {
@@ -495,6 +510,13 @@ class _RiskContent extends StatelessWidget {
             title: 'What to do',
             icon: Icons.check_circle_outline,
             items: assessment.recommendations,
+          ),
+        ],
+        if (assessment.sources.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 16),
+          _SourcesList(
+            sources: assessment.sources,
+            onOpen: onOpenSource,
           ),
         ],
         const SizedBox(height: 16),
@@ -705,6 +727,45 @@ class _BulletList extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A titled list of tappable web sources.
+class _SourcesList extends StatelessWidget {
+  const _SourcesList({required this.sources, required this.onOpen});
+
+  final List<HealthRiskSource> sources;
+  final ValueChanged<String> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(Icons.link, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              'Sources',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...sources.map(
+          (source) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.open_in_new, size: 18),
+            title: Text(source.title),
+            subtitle: Text(source.publisher),
+            onTap: () => onOpen(source.url),
           ),
         ),
       ],
