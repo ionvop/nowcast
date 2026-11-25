@@ -27,6 +27,13 @@ function healthRiskContent(array $overrides = []): array
         'uncertainty' => 'Humidity is forecast with moderate confidence.',
         'keyFindings' => ['Peak risk is between 14:00 and 16:00.'],
         'recommendations' => ['Avoid strenuous outdoor work at midday.'],
+        'sources' => [
+            [
+                'title' => 'Heat and Health',
+                'publisher' => 'World Health Organization',
+                'url' => 'https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health',
+            ],
+        ],
         'hourly' => [
             [
                 'hourIndex' => 0,
@@ -107,6 +114,13 @@ test('ai health risk returns the assessment', function (): void {
             'uncertainty' => 'Humidity is forecast with moderate confidence.',
             'keyFindings' => ['Peak risk is between 14:00 and 16:00.'],
             'recommendations' => ['Avoid strenuous outdoor work at midday.'],
+            'sources' => [
+                [
+                    'title' => 'Heat and Health',
+                    'publisher' => 'World Health Organization',
+                    'url' => 'https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health',
+                ],
+            ],
         ])
         ->assertJsonCount(2, 'hourly')
         ->assertJsonPath('hourly.0.hourIndex', 0)
@@ -144,6 +158,18 @@ test('ai health risk sends the stored profile and a strict schema', function ():
                 'keyFindings',
                 'recommendations',
                 'hourly',
+                'sources',
+            ]
+            && $schema['schema']['properties']['sources']['items']['required'] === [
+                'title',
+                'publisher',
+                'url',
+            ]
+            && $body['tools'][0]['type'] === 'openrouter:web_search'
+            && $body['tools'][0]['parameters'] === [
+                'engine' => 'parallel',
+                'mode' => 'turbo',
+                'max_results' => 10,
             ]
             && $schema['schema']['properties']['riskLevel']['enum'] === [
                 'low',
@@ -385,6 +411,55 @@ test('ai health risk returns 502 when the threshold is implausible', function ()
             'longitude' => 125.8078,
         ])
         ->assertStatus(502);
+});
+
+test('ai health risk drops invalid web sources and keeps the assessment', function (): void {
+    fakeHealthRiskResponse(healthRiskContent([
+        'sources' => [
+            [
+                'title' => 'Valid source',
+                'publisher' => 'CDC',
+                'url' => 'https://www.cdc.gov/heat/index.html',
+            ],
+            [
+                'title' => 'Invalid URL',
+                'publisher' => 'Example',
+                'url' => 'not-a-url',
+            ],
+            [
+                'title' => '',
+                'publisher' => 'Example',
+                'url' => 'https://example.com/heat',
+            ],
+            'not an object',
+        ],
+    ]));
+
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
+        ])
+        ->assertOk()
+        ->assertJsonCount(1, 'sources')
+        ->assertJsonPath('sources.0.title', 'Valid source')
+        ->assertJsonPath('sources.0.url', 'https://www.cdc.gov/heat/index.html');
+});
+
+test('ai health risk returns an empty sources array when the model omits it', function (): void {
+    $content = healthRiskContent();
+    unset($content['sources']);
+    fakeHealthRiskResponse($content);
+
+    $this->actingAs(userWithProfile(), 'sanctum')
+        ->postJson('/api/ai/health-risk', [
+            'currentConditions' => ['temperature' => ['degrees' => 36.0, 'unit' => 'CELSIUS']],
+            'latitude' => 7.4478,
+            'longitude' => 125.8078,
+        ])
+        ->assertOk()
+        ->assertJsonPath('sources', []);
 });
 
 test('ai health risk returns 502 when the hourly list is empty', function (): void {
