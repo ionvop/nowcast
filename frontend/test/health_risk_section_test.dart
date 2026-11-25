@@ -34,6 +34,13 @@ Map<String, dynamic> assessmentJson() {
     'uncertainty': 'Humidity is forecast with moderate confidence.',
     'keyFindings': <String>['Peak risk is between 14:00 and 16:00.'],
     'recommendations': <String>['Avoid strenuous outdoor work at midday.'],
+    'sources': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'title': 'Heat and Health',
+        'publisher': 'World Health Organization',
+        'url': 'https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health',
+      },
+    ],
     'hourly': <Map<String, dynamic>>[
       <String, dynamic>{
         'hourIndex': 0,
@@ -225,9 +232,37 @@ void main() {
     );
     expect(find.text('Key findings'), findsOneWidget);
     expect(find.text('What to do'), findsOneWidget);
+    expect(find.text('Sources'), findsOneWidget);
+    expect(find.text('Heat and Health'), findsOneWidget);
+    expect(find.text('World Health Organization'), findsOneWidget);
 
     // The generation date is shown.
     expect(find.textContaining('Generated'), findsOneWidget);
+  });
+
+  testWidgets('old payloads without sources render without a Sources section', (
+    tester,
+  ) async {
+    final response = assessmentJson()..remove('sources');
+    final api = RecordingApi(response: response);
+
+    await tester.pumpWidget(
+      wrap(
+        auth: signedInAuth(),
+        profiles: profileControllerWith(
+          const HealthProfile(age: 68, biologicalSex: 'female'),
+        ),
+        cache: HealthRiskCache(),
+        api: api.build(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Generate assessment'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('62'), findsOneWidget);
+    expect(find.text('Sources'), findsNothing);
   });
 
   testWidgets('generating sends the weather payloads and the auth token', (
