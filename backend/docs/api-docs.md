@@ -1271,7 +1271,8 @@ DELETE /api/profile/health
 
 Estimates the authenticated user's heat-strain risk by combining their saved
 health profile (§5.22) with the current weather, and returns the numbers the
-client plots plus a written summary.
+client plots plus a written summary. The AI uses web search to find reputable
+public-health sources that support the interpretation and recommendations.
 
 The profile is read **server-side** from the database rather than from the
 request body, so the client cannot spoof or omit health details. The client
@@ -1337,6 +1338,13 @@ POST /api/ai/health-risk
   "uncertainty": "Humidity is forecast with moderate confidence, and no weight was provided.",
   "keyFindings": ["Peak risk is between 14:00 and 16:00."],
   "recommendations": ["Avoid strenuous outdoor work at midday."],
+  "sources": [
+    {
+      "title": "Heat and Health",
+      "publisher": "World Health Organization",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health"
+    }
+  ],
   "hourly": [
     {
       "hourIndex": 0,
@@ -1360,6 +1368,10 @@ POST /api/ai/health-risk
 | `uncertainty` | string | the largest sources of uncertainty in the estimate |
 | `keyFindings` | array of strings | 2–5 actionable findings |
 | `recommendations` | array of strings | 2–5 concrete actions |
+| `sources` | array | up to 5 web sources supporting the assessment; may be empty |
+| `sources[].title` | string | the source page title |
+| `sources[].publisher` | string | the organisation or site publishing the source |
+| `sources[].url` | string | a real HTTP(S) URL found via web search |
 | `hourly` | array | up to 24 points, sorted by `hourIndex` |
 | `hourly[].hourIndex` | integer | zero-based index of the hour in the supplied forecast — use it as the chart's x value so the axis stays correct across midnight |
 | `hourly[].hour` | integer | hour of day, 0–23 |
@@ -1371,7 +1383,9 @@ POST /api/ai/health-risk
 > The response describes statistical **estimates for awareness, not a diagnosis**.
 > Out-of-range numbers are clamped (score to 0–100, probability to 0.0–1.0),
 > a mis-ordered percentile triple is sorted, and hourly points with an invalid
-> `hour` or `hourIndex` are dropped rather than failing the request.
+> `hour` or `hourIndex` are dropped rather than failing the request. Invalid
+> source entries are dropped; `sources` is always present as an array and may
+> be empty. The field is additive: older clients ignore it.
 
 **Errors:**
 - `400` — validation error (`currentConditions`, `latitude`, and `longitude` required), or the user has no saved profile (`{"message": "A health profile is required before generating an assessment."}`)
@@ -1483,7 +1497,7 @@ The client should:
 | GET | `/api/profile/health` | Yes | — | `200` `{profile: {...}\|null}` |
 | PUT | `/api/profile/health` | Yes | `{age, biologicalSex, heightCm?, weightKg?, activityLevel?, conditions?, medications?, lifestyle?}` | `200` `{profile: {...}}` |
 | DELETE | `/api/profile/health` | Yes | — | `200` `{message}` |
-| POST | `/api/ai/health-risk` | Yes | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?, previousAssessment?}` | `200` `{riskScore, riskLevel, thresholdC, thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly}` |
+| POST | `/api/ai/health-risk` | Yes | `{currentConditions, hourlyForecast?, dailyForecast?, latitude, longitude, placeName?, previousAssessment?}` | `200` `{riskScore, riskLevel, thresholdC, thresholdLabel, summary, uncertainty, keyFindings, recommendations, sources, hourly}` |
 | POST | `/api/posts` | Yes | `{content, address?, latitude?, longitude?}` | `201` post + user |
 | DELETE | `/api/posts/{id}` | Yes | — | `200` / `401` / `404` |
 | POST | `/api/posts/{id}/comments` | Yes | `{content}` | `201` comment + user / `401` / `404` |
