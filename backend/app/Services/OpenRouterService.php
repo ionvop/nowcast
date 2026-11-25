@@ -73,6 +73,16 @@ class OpenRouterService
     ];
 
     /**
+     * The keys each supporting web source must return.
+     */
+    protected const HEALTH_RISK_SOURCE_FIELDS = ['title', 'publisher', 'url'];
+
+    /**
+     * The maximum number of supporting web sources accepted from the model.
+     */
+    protected const HEALTH_RISK_MAX_SOURCES = 5;
+
+    /**
      * The allowed risk levels, from least to most severe.
      */
     protected const HEALTH_RISK_LEVELS = ['low', 'moderate', 'high', 'very_high', 'extreme'];
@@ -645,6 +655,10 @@ You are a physiologist and biometeorologist who models heat strain for public-he
 decision support. You combine a person's health profile with live weather to estimate
 how likely their core body temperature is to cross a clinical threshold.
 
+Use web search to find reputable public-health sources that support the
+interpretation and recommendations in your assessment. Prefer authoritative
+sources such as WHO, CDC, and national or local health agencies.
+
 Produce:
 - "riskScore": an integer from 0 to 100, where 0 is no measurable heat strain and 100
   is an immediate life-threatening emergency.
@@ -662,6 +676,9 @@ Produce:
   estimate (for example missing profile details, forecast spread, or humidity assumptions).
 - "keyFindings": 2 to 5 short bullet-style sentences a decision-maker can act on.
 - "recommendations": 2 to 5 short, concrete, actionable steps for this person today.
+- "sources": up to 5 web sources that support the interpretation or recommendations,
+  each with "title", "publisher", and "url". Use an empty array when no usable
+  source was found.
 - "hourly": one entry per hour of the supplied hourly forecast, in the same order, with:
   - "hourIndex": the zero-based index of the hour in the supplied forecast.
   - "hour": the hour of day in 24-hour time (0-23).
@@ -674,7 +691,10 @@ Produce:
 Rules:
 - coreTempP10C must be less than or equal to coreTempMedianC, which must be less than or
   equal to coreTempP90C, for every hour.
-- Base the estimate on the supplied weather and profile only. Do not invent measurements.
+- Base the estimate on the supplied weather and profile only. Use web sources only to
+  support interpretation and recommendations; do not invent measurements.
+- Return each web source you actually used in "sources" with a real URL. Never invent
+  or guess a URL. If you found no usable source, return an empty "sources" array.
 - Treat missing profile details as unknown, not as absent risk, and say so in "uncertainty".
 - These are statistical estimates for awareness, not a diagnosis or medical advice.
 - If a "previousAssessment" is supplied, treat it as the last estimate the user saw. Stay
@@ -689,8 +709,8 @@ timeZone.id — a timezone such as "Asia/Manila" covers many cities and is not t
 user's location.
 
 Return strictly valid JSON with exactly these keys: riskScore, riskLevel, thresholdC,
-thresholdLabel, summary, uncertainty, keyFindings, recommendations, hourly. Do not wrap
-the JSON in markdown or add commentary outside the JSON.
+thresholdLabel, summary, uncertainty, keyFindings, recommendations, sources, hourly. Do
+not wrap the JSON in markdown or add commentary outside the JSON.
 PROMPT,
         ];
 
@@ -740,7 +760,7 @@ PROMPT,
                     'schema' => [
                         'type' => 'object',
                         'additionalProperties' => false,
-                        'required' => self::HEALTH_RISK_REQUIRED_FIELDS,
+                        'required' => array_merge(self::HEALTH_RISK_REQUIRED_FIELDS, ['sources']),
                         'properties' => [
                             'riskScore' => [
                                 'type' => 'integer',
@@ -783,6 +803,30 @@ PROMPT,
                                     'description' => 'A short, concrete action for this person today.',
                                 ],
                             ],
+                            'sources' => [
+                                'type' => 'array',
+                                'maxItems' => self::HEALTH_RISK_MAX_SOURCES,
+                                'description' => 'Reputable web sources found via web search that support the assessment.',
+                                'items' => [
+                                    'type' => 'object',
+                                    'additionalProperties' => false,
+                                    'required' => self::HEALTH_RISK_SOURCE_FIELDS,
+                                    'properties' => [
+                                        'title' => [
+                                            'type' => 'string',
+                                            'description' => 'The title of the source page.',
+                                        ],
+                                        'publisher' => [
+                                            'type' => 'string',
+                                            'description' => 'The organisation or site publishing the source.',
+                                        ],
+                                        'url' => [
+                                            'type' => 'string',
+                                            'description' => 'A real, working URL found via web search.',
+                                        ],
+                                    ],
+                                ],
+                            ],
                             'hourly' => [
                                 'type' => 'array',
                                 'maxItems' => self::HEALTH_RISK_MAX_HOURS,
@@ -822,6 +866,16 @@ PROMPT,
                     ],
                 ],
             ],
+            'tools' => [
+                [
+                    'type' => 'openrouter:web_search',
+                    'parameters' => [
+                        'engine' => 'parallel',
+                        'mode' => 'turbo',
+                        'max_results' => 10,
+                    ]
+                ]
+            ]
         ];
     }
 
@@ -870,6 +924,8 @@ PROMPT,
             throw new OpenRouterApiException('AI service returned an invalid response.');
         }
 
+        $sources = $this->normalizeHealthRiskSources($decoded['sources'] ?? []);
+
         return [
             'riskScore' => $this->clampInt($decoded['riskScore'], 0, 100),
             'riskLevel' => $riskLevel,
@@ -879,8 +935,69 @@ PROMPT,
             'uncertainty' => $uncertainty,
             'keyFindings' => $this->stringList($decoded['keyFindings']),
             'recommendations' => $this->stringList($decoded['recommendations']),
+            'sources' => $sources,
             'hourly' => $hourly,
         ];
+    }
+
+    /**
+     * Validate the supporting web sources of a health-risk assessment.
+     *
+     * Invalid entries are dropped rather than failing the whole assessment: the
+     * sources are supporting context, not the risk estimate itself.
+     *
+     * @param  mixed  $sources  The raw `sources` value from the model.
+     * @return array<int, array<string, string>>
+     */
+    protected function normalizeHealthRiskSources(mixed $sources): array
+    {
+        if (! is_array($sources)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($sources as $source) {
+            if (! is_array($source)) {
+                continue;
+            }
+
+            foreach (self::HEALTH_RISK_SOURCE_FIELDS as $field) {
+                if (! Arr::exists($source, $field) || ! is_string($source[$field])) {
+                    continue 2;
+                }
+            }
+
+            $title = trim($source['title']);
+            $publisher = trim($source['publisher']);
+            $url = trim($source['url']);
+
+            if ($title === '' || $publisher === '' || $url === '') {
+                continue;
+            }
+
+            if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+                continue;
+            }
+
+            $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+            if (! in_array($scheme, ['http', 'https'], true)) {
+                continue;
+            }
+
+            $normalized[] = [
+                'title' => $title,
+                'publisher' => $publisher,
+                'url' => $url,
+            ];
+
+            if (count($normalized) >= self::HEALTH_RISK_MAX_SOURCES) {
+                break;
+            }
+        }
+
+        return $normalized;
     }
 
     /**
