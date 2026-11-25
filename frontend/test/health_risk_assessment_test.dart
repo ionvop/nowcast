@@ -13,6 +13,13 @@ Map<String, dynamic> assessmentJson() {
     'uncertainty': 'Humidity is forecast with moderate confidence.',
     'keyFindings': <String>['Peak risk is between 14:00 and 16:00.'],
     'recommendations': <String>['Avoid strenuous outdoor work at midday.'],
+    'sources': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'title': 'Heat and Health',
+        'publisher': 'World Health Organization',
+        'url': 'https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health',
+      },
+    ],
     'hourly': <Map<String, dynamic>>[
       <String, dynamic>{
         'hourIndex': 0,
@@ -50,6 +57,9 @@ void main() {
       );
       expect(assessment.keyFindings, hasLength(1));
       expect(assessment.recommendations, hasLength(1));
+      expect(assessment.sources, hasLength(1));
+      expect(assessment.sources.first.title, 'Heat and Health');
+      expect(assessment.sources.first.publisher, 'World Health Organization');
       expect(assessment.hourly, hasLength(2));
       expect(assessment.hourly.first.hour, 12);
       expect(assessment.hourly.last.probability, 0.55);
@@ -64,6 +74,7 @@ void main() {
       expect(assessment.thresholdC, 38.0);
       expect(assessment.summary, '');
       expect(assessment.keyFindings, isEmpty);
+      expect(assessment.sources, isEmpty);
       expect(assessment.hourly, isEmpty);
       expect(assessment.hasChartData, isFalse);
     });
@@ -88,6 +99,28 @@ void main() {
       expect(assessment.hourly, hasLength(1));
     });
 
+    test('skips malformed web sources', () {
+      final json = assessmentJson();
+      json['sources'] = <dynamic>[
+        <String, dynamic>{
+          'title': 'Valid source',
+          'publisher': 'CDC',
+          'url': 'https://www.cdc.gov/heat/index.html',
+        },
+        <String, dynamic>{
+          'title': 'Bad URL',
+          'publisher': 'Example',
+          'url': 'not-a-url',
+        },
+        'not an object',
+      ];
+
+      final assessment = HealthRiskAssessment.fromJson(json);
+
+      expect(assessment.sources, hasLength(1));
+      expect(assessment.sources.first.title, 'Valid source');
+    });
+
     test('parses a generatedAt timestamp', () {
       final json = assessmentJson()
         ..['generatedAt'] = '2026-11-11T09:12:00Z';
@@ -107,6 +140,8 @@ void main() {
       expect(restored.riskLevel, original.riskLevel);
       expect(restored.thresholdC, original.thresholdC);
       expect(restored.summary, original.summary);
+      expect(restored.sources, hasLength(original.sources.length));
+      expect(restored.sources.first.url, original.sources.first.url);
       expect(restored.hourly, hasLength(original.hourly.length));
       expect(
         restored.hourly.first.coreTempP90C,
@@ -128,6 +163,7 @@ void main() {
       final stamped = assessment.withGeneratedAt(DateTime.utc(2026, 11, 11));
 
       expect(stamped.riskScore, assessment.riskScore);
+      expect(stamped.sources, hasLength(assessment.sources.length));
       expect(stamped.hourly, hasLength(assessment.hourly.length));
       expect(stamped.generatedAt, isNotNull);
     });
