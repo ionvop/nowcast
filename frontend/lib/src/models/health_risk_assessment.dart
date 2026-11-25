@@ -1,3 +1,35 @@
+/// A web source that supports a [HealthRiskAssessment].
+class HealthRiskSource {
+  const HealthRiskSource({
+    required this.title,
+    required this.publisher,
+    required this.url,
+  });
+
+  final String title;
+  final String publisher;
+  final String url;
+
+  factory HealthRiskSource.fromJson(Map<String, dynamic> json) {
+    String read(dynamic value) => value is String ? value.trim() : '';
+    return HealthRiskSource(
+      title: read(json['title']),
+      publisher: read(json['publisher']),
+      url: read(json['url']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'title': title,
+      'publisher': publisher,
+      'url': url,
+    };
+  }
+
+  bool get isValid => title.isNotEmpty && url.startsWith('http');
+}
+
 /// One hour of a [HealthRiskAssessment].
 ///
 /// [probability] is the chance that the user's core body temperature crosses
@@ -85,6 +117,7 @@ class HealthRiskAssessment {
     required this.uncertainty,
     required this.keyFindings,
     required this.recommendations,
+    required this.sources,
     required this.hourly,
     this.generatedAt,
   });
@@ -113,6 +146,9 @@ class HealthRiskAssessment {
   /// Short, concrete actions for the user today.
   final List<String> recommendations;
 
+  /// Web sources that support the assessment.
+  final List<HealthRiskSource> sources;
+
   /// The hourly probability curve and core-temperature band.
   final List<HealthRiskHour> hourly;
 
@@ -136,6 +172,7 @@ class HealthRiskAssessment {
       uncertainty: uncertainty,
       keyFindings: keyFindings,
       recommendations: recommendations,
+      sources: sources,
       hourly: hourly,
       generatedAt: time,
     );
@@ -143,6 +180,7 @@ class HealthRiskAssessment {
 
   factory HealthRiskAssessment.fromJson(Map<String, dynamic> json) {
     final hourly = json['hourly'];
+    final sources = json['sources'];
     return HealthRiskAssessment(
       riskScore: _int(json['riskScore']) ?? 0,
       riskLevel: _string(json['riskLevel'], fallback: 'low'),
@@ -152,6 +190,13 @@ class HealthRiskAssessment {
       uncertainty: _string(json['uncertainty']),
       keyFindings: _stringList(json['keyFindings']),
       recommendations: _stringList(json['recommendations']),
+      sources: sources is List
+          ? sources
+                .whereType<Map<String, dynamic>>()
+                .map(HealthRiskSource.fromJson)
+                .where((source) => source.isValid)
+                .toList(growable: false)
+          : const <HealthRiskSource>[],
       hourly: hourly is List
           ? hourly
                 .whereType<Map<String, dynamic>>()
@@ -174,6 +219,7 @@ class HealthRiskAssessment {
       'uncertainty': uncertainty,
       'keyFindings': keyFindings,
       'recommendations': recommendations,
+      'sources': sources.map((source) => source.toJson()).toList(growable: false),
       'hourly': hourly.map((h) => h.toJson()).toList(growable: false),
       if (generatedAt != null) 'generatedAt': generatedAt!.toIso8601String(),
     };
