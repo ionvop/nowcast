@@ -14,6 +14,13 @@ HealthRiskAssessment buildAssessment() {
     'uncertainty': 'Humidity is forecast with moderate confidence.',
     'keyFindings': <String>['Peak risk is between 14:00 and 16:00.'],
     'recommendations': <String>['Avoid strenuous outdoor work at midday.'],
+    'sources': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'title': 'Heat and Health',
+        'publisher': 'World Health Organization',
+        'url': 'https://www.who.int/news-room/fact-sheets/detail/climate-change-heat-and-health',
+      },
+    ],
     'hourly': <Map<String, dynamic>>[
       <String, dynamic>{
         'hourIndex': 0,
@@ -61,6 +68,8 @@ void main() {
     expect(restored.riskLevel, 'very_high');
     expect(restored.thresholdC, 38.0);
     expect(restored.summary, 'Heat strain is likely this afternoon.');
+    expect(restored.sources, hasLength(1));
+    expect(restored.sources.first.title, 'Heat and Health');
     expect(restored.hourly, hasLength(1));
     expect(restored.generatedAt, now);
   });
